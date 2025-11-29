@@ -13,7 +13,7 @@ let maxGX = 0;
 let maxGY = 0;
 let lastWarningTime = 0;
 let accelerationHistory = [];
-let currentOrientation = 0;
+let currentOrientation = 0; // 0:ポートレート, 90/-90:ランドスケープ
 
 // --- DOM要素 ---
 const ball = document.getElementById('ball');
@@ -39,7 +39,7 @@ function setupAudio() {
         oscillator.connect(gainNode);
         gainNode.connect(audioContext.destination);
         oscillator.start();
-        gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+        gainNode.gain.setValueAtTime(0, audioContext.currentTime); // 初期状態はミュート
     } catch (e) {
         console.error("Audio Contextのセットアップに失敗しました。", e);
         statusText.textContent = '警告音機能が無効です。';
@@ -98,11 +98,11 @@ function initializeZeroPoint(event) {
     
     currentOrientation = window.orientation || 0;
 
-    // 【修正】静止時のX, Y, Z軸の重力成分すべてを記録
+    // 静止時のX, Y, Z軸の重力成分すべてを記録
     const { x, y, z } = event.accelerationIncludingGravity;
     initialGravity.x = x;
     initialGravity.y = y;
-    initialGravity.z = z; // Z軸の重力成分も記録
+    initialGravity.z = z; 
 
     isInitialized = true;
     maxGX = 0;
@@ -128,10 +128,8 @@ function handleMotion(event) {
     // 1. 重力成分の除去 (純粋なユーザー加速度を抽出)
     let userAccelX = accelerationIncludingGravity.x - initialGravity.x;
     let userAccelY = accelerationIncludingGravity.y - initialGravity.y;
-    // Z軸は車の前後左右の動きに影響しないため、通常無視しても良いが、ここでは純粋な加速度を計算する
-    // let userAccelZ = accelerationIncludingGravity.z - initialGravity.z; 
 
-    // 2. 【重要修正】ダッシュボード垂直設置時の軸マッピング
+    // 2. ダッシュボード垂直設置時の軸マッピング
     
     let accelX_screen; // 左右（画面横）方向の加速度
     let accelY_screen; // 前後（画面縦）方向の加速度
@@ -140,14 +138,14 @@ function handleMotion(event) {
     if (currentOrientation === 90) { // ホームボタン右側を右とする（一般的な車載配置）
         // 左右 (画面横) の動き = デバイスX軸 (userAccelX)
         accelX_screen = userAccelX; 
-        // 前後 (画面縦) の動き = デバイスY軸 (-userAccelY)。加速でボールが上に動くように調整。
+        // 前後 (画面縦) の動き = デバイスY軸 (-userAccelY)。
         accelY_screen = -userAccelY; 
     } else if (currentOrientation === -90) { // ホームボタン左側
         // 左右 (画面横) の動き = -userAccelX
         accelX_screen = -userAccelX;
         // 前後 (画面縦) の動き = userAccelY
         accelY_screen = userAccelY;
-    } else { // ポートレートまたは逆さまの場合はエラーを出すか、標準の縦向きとして扱う
+    } else { 
         statusText.textContent = '向きが不正です。横向きにしてください。';
         return;
     }
@@ -167,13 +165,22 @@ function handleMotion(event) {
     if (gY > maxGY) maxGY = gY;
 
     // 6. ボールの位置の計算とUI更新
-    const normalizedX = Math.max(-1, Math.min(1, accelX_screen / MAX_G));
-    const normalizedY = Math.max(-1, Math.min(1, accelY_screen / MAX_G));
+    const normalizedX = accelX_screen / MAX_G;
+    const normalizedY = accelY_screen / MAX_G;
     
-    const offsetX = normalizedX * MAX_DISPLACEMENT;
-    const offsetY = normalizedY * MAX_DISPLACEMENT; // 【修正】Y軸の反転を調整。加速（+Y）で上に動くように、オフセットをそのまま使用する。
+    // 【重要修正】ボールの動きの方向をすべて反転させる
+    // 画面X軸: +G(右カーブで左G) のときに、ボールを右(+)に動かしたい -> 符号を反転させる (-normalizedX)
+    // 画面Y軸: +G(加速で後ろG) のときに、ボールを下(+)に動かしたい -> 符号を反転させる (-normalizedY)
+    
+    const offsetX = -normalizedX * MAX_DISPLACEMENT; // 左右反転
+    const offsetY = -normalizedY * MAX_DISPLACEMENT; // 前後反転
 
-    ball.style.transform = `translate(calc(-50% + ${offsetX}px), calc(-50% + ${offsetY}px))`;
+    // ボールがメーターからはみ出さないようにクリップ
+    const clipX = Math.max(-MAX_DISPLACEMENT, Math.min(MAX_DISPLACEMENT, offsetX));
+    const clipY = Math.max(-MAX_DISPLACEMENT, Math.min(MAX_DISPLACEMENT, offsetY));
+
+
+    ball.style.transform = `translate(calc(-50% + ${clipX}px), calc(-50% + ${clipY}px))`;
     updateDisplay();
 }
 
