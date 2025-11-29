@@ -6,8 +6,8 @@ const DECLINE_THRESHOLD = 0.3;
 const SLIP_PEAK_MIN = 0.4; 
 const COOLDOWN_MS = 3000; 
 const HISTORY_SIZE = 12; 
-const TRACE_DURATION_MS = 1000; // 【追加】残像が残る時間 (1秒)
-const TRACE_INTERVAL_MS = 50;   // 【追加】残像を記録する間隔 (50msごと)
+const TRACE_DURATION_MS = 1000; // 残像が残る時間 (1秒)
+const TRACE_INTERVAL_MS = 50;   // 残像を記録する間隔 (50msごと)
 
 let initialGravity = { x: 0, y: 0, z: 0 }; 
 let isInitialized = false;
@@ -18,12 +18,13 @@ let accelerationHistory = [];
 let currentOrientation = 0; 
 let filteredPosition = { x: 0, y: 0 }; 
 
-let traceHistory = []; // 【追加】残像データ (位置とタイムスタンプ)
+// 【修正】残像データ (位置とタイムスタンプとDOM要素自体を記録)
+let traceHistory = []; 
 let lastTraceTime = 0;
 
 // --- DOM要素 ---
 const ball = document.getElementById('ball');
-const traceContainer = document.getElementById('ball-trace-container'); // 【追加】
+const traceContainer = document.getElementById('ball-trace-container'); 
 const statusText = document.getElementById('status-text');
 const maxGxDisplay = document.getElementById('max-gx');
 const maxGyDisplay = document.getElementById('max-gy');
@@ -46,7 +47,7 @@ function setupAudio() {
         oscillator.connect(gainNode);
         gainNode.connect(audioContext.destination);
         oscillator.start();
-        gainNode.gain.setValueAtTime(0, audioContext.currentTime); // 初期状態はミュート
+        gainNode.gain.setValueAtTime(0, audioContext.currentTime); 
     } catch (e) {
         console.error("Audio Contextのセットアップに失敗しました。", e);
         statusText.textContent = '警告音機能が無効です。';
@@ -105,7 +106,6 @@ function initializeZeroPoint(event) {
     
     currentOrientation = window.orientation || 0;
 
-    // 静止時のX, Y, Z軸の重力成分すべてを記録
     const { x, y, z } = event.accelerationIncludingGravity;
     initialGravity.x = x;
     initialGravity.y = y;
@@ -116,7 +116,8 @@ function initializeZeroPoint(event) {
     maxGY = 0;
     accelerationHistory = [];
     filteredPosition = { x: 0, y: 0 }; 
-    traceHistory = []; // 【修正】残像履歴も初期化
+    traceHistory = []; 
+    traceContainer.innerHTML = ''; // 残像DOMもクリア
 
     statusText.textContent = '初期化完了 (G計測中)';
     updateDisplay();
@@ -154,23 +155,20 @@ function handleMotion(event) {
         return;
     }
     
-    // 3. 全加速度の大きさ（G単位）を計算
-    const accelMagnitudeG = Math.sqrt(accelX_car * accelX_car + accelY_car * accelY_car) / MAX_G;
-    
-    // 4. スリップ判定と警告音
+    // 3. G計算、4. 警告、5. 最大G更新 (省略)
+    const MAX_G_CONST = MAX_G; 
+    const accelMagnitudeG = Math.sqrt(accelX_car * accelX_car + accelY_car * accelY_car) / MAX_G_CONST;
     updateHistory(accelMagnitudeG);
     checkAndTriggerSlipWarning(accelMagnitudeG);
-
-    // 5. 最大加速度の更新
-    const gX = Math.abs(accelX_car) / MAX_G;
-    const gY = Math.abs(accelY_car) / MAX_G;
-    
+    const gX = Math.abs(accelX_car) / MAX_G_CONST;
+    const gY = Math.abs(accelY_car) / MAX_G_CONST;
     if (gX > maxGX) maxGX = gX;
     if (gY > maxGY) maxGY = gY;
 
+
     // 6. 生のボール位置の計算
-    const normalizedX = accelX_car / MAX_G; 
-    const normalizedY = accelY_car / MAX_G; 
+    const normalizedX = accelX_car / MAX_G_CONST; 
+    const normalizedY = accelY_car / MAX_G_CONST; 
     
     const rawOffsetX = normalizedX * MAX_DISPLACEMENT; 
     const rawOffsetY = -normalizedY * MAX_DISPLACEMENT; 
@@ -188,45 +186,52 @@ function handleMotion(event) {
     ball.style.transform = `translate(calc(-50% + ${clipX}px), calc(-50% + ${clipY}px))`;
     updateDisplay();
     
-    // 10. 【追加】残像の記録と描画
-    if (currentTime - lastTraceTime > TRACE_INTERVAL_MS) {
-        traceHistory.push({ x: clipX, y: clipY, time: currentTime });
-        lastTraceTime = currentTime;
-    }
-    renderTrace(currentTime); // 毎フレーム描画を呼び出す
+    // 10. 【修正】残像の記録と描画ロジックを分離
+    updateTrace(clipX, clipY, currentTime);
 }
 
 
-// --- 【追加】残像描画ロジック ---
+// --- 【追加・修正】残像の管理ロジック ---
 
-function renderTrace(currentTime) {
-    // 古い残像を削除
-    while (traceHistory.length > 0 && currentTime - traceHistory[0].time > TRACE_DURATION_MS) {
-        traceHistory.shift();
+function updateTrace(x, y, currentTime) {
+    // 1. 古い残像の削除とフェードアウト開始
+    while (traceHistory.length > 0 && currentTime - traceHistory[0].time > TRACE_DURATION_MS + 100) {
+        // TRACE_DURATION_MS + 100ms 後にDOMから完全に削除
+        const oldDot = traceHistory.shift();
+        if (oldDot.element) {
+            oldDot.element.remove();
+        }
     }
-    
-    // コンテナ内の既存の残像をクリア（再描画が重い場合はDOMプールを使うが、ここではシンプルに毎回クリア）
-    traceContainer.innerHTML = '';
 
-    // 新しい残像を描画
-    traceHistory.forEach(dot => {
-        const age = currentTime - dot.time;
-        // 時間経過で 1.0 から 0.0 まで透明度を減少させる
-        const opacity = 1.0 - (age / TRACE_DURATION_MS);
-        
+    // 2. 残像の記録と新しいDOM要素の生成
+    if (currentTime - lastTraceTime > TRACE_INTERVAL_MS) {
         const traceDot = document.createElement('div');
         traceDot.className = 'trace-dot';
-        
-        // メーターコンテナの幅/高さ (250px) の中心 (125px) を基準に位置を設定
-        traceDot.style.transform = `translate(calc(125px + ${dot.x}px), calc(125px + ${dot.y}px))`;
-        traceDot.style.opacity = opacity;
+
+        // メーターコンテナの中心 (125px) を基準に位置を設定
+        traceDot.style.transform = `translate(calc(125px + ${x}px), calc(125px + ${y}px))`;
         
         traceContainer.appendChild(traceDot);
-    });
+
+        traceHistory.push({ x, y, time: currentTime, element: traceDot });
+        lastTraceTime = currentTime;
+        
+        // 3. 【重要】フェードアウトを開始させる
+        // DOMに要素が追加された後、次のイベントループで透明度を0にすることでトランジションが発火する
+        // requestAnimationFrameを使うことで確実に次の描画サイクルを待つ
+        requestAnimationFrame(() => {
+             // 記録済みの古い残像の透明度を下げ、フェードアウトさせる
+            traceHistory.forEach(dot => {
+                if (currentTime - dot.time > 0) {
+                     // 現在時刻より前に生成された残像をフェードアウトさせる
+                    dot.element.style.opacity = '0';
+                }
+            });
+        });
+    }
 }
 
-
-// --- G抜けスリップ判定ロジック (変更なし) ---
+// ... (G抜け判定ロジック、UI更新ロジックは省略) ...
 
 function updateHistory(currentMagnitude) {
     accelerationHistory.push(currentMagnitude);
@@ -248,8 +253,6 @@ function checkAndTriggerSlipWarning(currentMagnitude) {
         console.log(`🚨 G抜け警告！ ピーク: ${peakMagnitude.toFixed(2)} G -> 現在: ${currentMagnitude.toFixed(2)} G`);
     }
 }
-
-// --- UI表示とイベントリスナー (変更なし) ---
 
 function updateDisplay() {
     maxGxDisplay.textContent = maxGX.toFixed(2);
