@@ -140,12 +140,12 @@ function handleMotion(event) {
         // 前後加速度 (加速:+) -> Z軸。反転。
         accelY_car = -userAccelZ; 
         // 左右加速度 (右:+) -> Y軸。そのまま。
-        accelX_car = -userAccelY; 
+        accelX_car = userAccelY; 
     } else if (currentOrientation === -90) { // ホームボタン左側
         // 前後加速度 (加速:+) -> Z軸。反転。
         accelY_car = -userAccelZ;
         // 左右加速度 (右:+) -> Y軸。反転。
-        accelX_car = userAccelY;
+        accelX_car = -userAccelY;
     } else { 
         statusText.textContent = '向きが不正です。横向きにしてください。';
         return;
@@ -175,7 +175,7 @@ function handleMotion(event) {
     const offsetX = -normalizedX * MAX_DISPLACEMENT; // 【修正】符号を再反転（元に戻す）
     
     // Y軸 (前後): 加速時(+normalizedY)のとき、ボールを上(-)に動かす。（変更なし）
-    const offsetY = -normalizedY * MAX_DISPLACEMENT; 
+    const offsetY = normalizedY * MAX_DISPLACEMENT; 
 
     // ボールがメーターからはみ出さないようにクリップ
     const clipX = Math.max(-MAX_DISPLACEMENT, Math.min(MAX_DISPLACEMENT, offsetX));
