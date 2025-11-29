@@ -9,7 +9,7 @@ const HISTORY_SIZE = 12;
 const TRACE_DURATION_MS = 1000; 
 const TRACE_INTERVAL_MS = 50;   
 
-// 【修正追加】メーターの最大表示範囲を0.7Gに設定
+// メーターの最大表示範囲を0.7Gに設定
 const MAX_G_SCALE = 0.7; 
 
 let initialGravity = { x: 0, y: 0, z: 0 }; 
@@ -33,7 +33,11 @@ const maxGyDisplay = document.getElementById('max-gy');
 const initButton = document.getElementById('request-permission');
 const resetButton = document.getElementById('reset-max');
 
-// --- (setupAudio, playWarningSound, requestSensorPermission, setupListeners, updateOrientation, initializeZeroPoint は省略) ---
+// --- サウンドプール ---
+let audioContext;
+let oscillator;
+let gainNode;
+
 function setupAudio() {
     try {
         audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -56,6 +60,8 @@ function playWarningSound() {
     gainNode.gain.setValueAtTime(0.5, audioContext.currentTime);
     gainNode.gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + 0.3);
 }
+
+// --- センサーアクセスと初期化 ---
 function requestSensorPermission() {
     if (typeof DeviceOrientationEvent.requestPermission === 'function') {
         DeviceOrientationEvent.requestPermission()
@@ -110,13 +116,11 @@ function initializeZeroPoint(event) {
 }
 
 // --- メインデータ処理 ---
-
 function handleMotion(event) {
     const { accelerationIncludingGravity } = event;
     const currentTime = Date.now(); 
 
     if (!accelerationIncludingGravity) return;
-
     if (!isInitialized) {
         initializeZeroPoint(event);
         return;
@@ -155,7 +159,7 @@ function handleMotion(event) {
     const normalizedX = accelX_car / MAX_G_CONST; 
     const normalizedY = accelY_car / MAX_G_CONST; 
     
-    // 【修正】スケールアップを適用: 0.7Gでメーター端に到達するようにする
+    // スケールアップを適用: 0.7Gでメーター端に到達するようにする
     const rawOffsetX = (normalizedX / MAX_G_SCALE) * MAX_DISPLACEMENT; 
     const rawOffsetY = -(normalizedY / MAX_G_SCALE) * MAX_DISPLACEMENT; 
 
@@ -218,7 +222,7 @@ function updateTrace(x, y, currentTime) {
     }
 }
 
-// --- (G抜け判定ロジック, UI更新ロジックは省略) ---
+// --- G抜け判定ロジック, UI更新ロジック ---
 function updateHistory(currentMagnitude) {
     accelerationHistory.push(currentMagnitude);
     if (accelerationHistory.length > HISTORY_SIZE) {
