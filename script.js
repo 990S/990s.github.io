@@ -137,12 +137,12 @@ function handleMotion(event) {
     // 加速で+accelY_car、右カーブで+accelX_carとなるように符号調整
     
     if (currentOrientation === 90) { // ホームボタン右側
-        // 前後加速度 (加速:+) -> Z軸。加速で奥(負)になる可能性が高いため反転。
+        // 前後加速度 (加速:+) -> Z軸。反転。
         accelY_car = -userAccelZ; 
         // 左右加速度 (右:+) -> Y軸。そのまま。
         accelX_car = userAccelY; 
     } else if (currentOrientation === -90) { // ホームボタン左側
-        // 前後加速度 (加速:+) -> Z軸。加速で奥(負)になる可能性が高いため反転。
+        // 前後加速度 (加速:+) -> Z軸。反転。
         accelY_car = -userAccelZ;
         // 左右加速度 (右:+) -> Y軸。反転。
         accelX_car = -userAccelY;
@@ -171,8 +171,8 @@ function handleMotion(event) {
     
     // 最終的なボールの移動方向設定:
     
-    // X軸 (左右): 右方向への加速(+normalizedX)のとき、ボールを左(-)に動かすために反転
-    const offsetX = -normalizedX * MAX_DISPLACEMENT; 
+    // X軸 (左右): 右方向への加速(+normalizedX)のとき、ボールを右(+)に動かすために反転を解除
+    const offsetX = normalizedX * MAX_DISPLACEMENT; // 【修正】符号を再反転（元に戻す）
     
     // Y軸 (前後): 加速時(+normalizedY)のとき、ボールを上(-)に動かす。（変更なし）
     const offsetY = -normalizedY * MAX_DISPLACEMENT; 
