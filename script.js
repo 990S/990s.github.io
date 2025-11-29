@@ -140,12 +140,12 @@ function handleMotion(event) {
         // 前後加速度 (加速:+) -> Z軸。反転。
         accelY_car = -userAccelZ; 
         // 左右加速度 (右:+) -> Y軸。そのまま。
-        accelX_car = userAccelY; 
+        accelX_car = -userAccelY; 
     } else if (currentOrientation === -90) { // ホームボタン左側
         // 前後加速度 (加速:+) -> Z軸。反転。
         accelY_car = -userAccelZ;
         // 左右加速度 (右:+) -> Y軸。反転。
-        accelX_car = -userAccelY;
+        accelX_car = userAccelY;
     } else { 
         statusText.textContent = '向きが不正です。横向きにしてください。';
         return;
