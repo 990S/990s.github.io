@@ -166,13 +166,13 @@ function handleMotion(event) {
     if (gY > maxGY) maxGY = gY;
 
     // 6. ボールの位置の計算とUI更新
-    const normalizedX = -accelX_car / MAX_G; // 車の左右加速度 (-1.0 to 1.0)
+    const normalizedX = accelX_car / MAX_G; // 車の左右加速度 (-1.0 to 1.0)
     const normalizedY = accelY_car / MAX_G; // 車の前後加速度 (-1.0 to 1.0)
     
     // 最終的なボールの移動方向設定:
     
     // X軸 (左右): 右方向への加速(+normalizedX)のとき、ボールを右(+)に動かすために反転を解除
-    const offsetX = normalizedX * MAX_DISPLACEMENT; // 【修正】符号を再反転（元に戻す）
+    const offsetX = -normalizedX * MAX_DISPLACEMENT; // 【修正】符号を再反転（元に戻す）
     
     // Y軸 (前後): 加速時(+normalizedY)のとき、ボールを上(-)に動かす。（変更なし）
     const offsetY = -normalizedY * MAX_DISPLACEMENT; 
