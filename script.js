@@ -1,7 +1,7 @@
 // --- 定数と状態変数 ---
 const MAX_G = 9.80665; // 1G (m/s^2)
-const MAX_DISPLACEMENT = 150; // メーターの半径 (CSSのwidth/2)
-const FILTER_ALPHA = 0.2; // 【追加】EMA平滑化係数。小さいほど滑らかになる (0.05～0.5程度で調整)
+const MAX_DISPLACEMENT = 125; // メーターの半径 (250px / 2)
+const FILTER_ALPHA = 0.2; // EMA平滑化係数
 const DECLINE_THRESHOLD = 0.3; // G抜け判定の減少幅 (G)
 const SLIP_PEAK_MIN = 0.4; // 判定前の最小G
 const COOLDOWN_MS = 3000; // 警告音のクールダウン時間 (ms)
@@ -15,8 +15,6 @@ let maxGY = 0;
 let lastWarningTime = 0;
 let accelerationHistory = [];
 let currentOrientation = 0; // 0:ポートレート, 90/-90:ランドスケープ
-
-// 【追加】フィルタリング後のボール位置を保持する変数
 let filteredPosition = { x: 0, y: 0 }; 
 
 // --- DOM要素 ---
@@ -152,7 +150,6 @@ function handleMotion(event) {
         // 左右
         accelX_car = userAccelY; 
     } else { 
-        // 横向きでない場合は処理をスキップ
         return;
     }
     
@@ -178,7 +175,7 @@ function handleMotion(event) {
     const rawOffsetX = normalizedX * MAX_DISPLACEMENT; 
     const rawOffsetY = -normalizedY * MAX_DISPLACEMENT; 
 
-    // 7. 【追加】指数移動平均 (EMA) フィルタの適用
+    // 7. 指数移動平均 (EMA) フィルタの適用
     
     // X軸の平滑化
     filteredPosition.x = (FILTER_ALPHA * rawOffsetX) + ((1 - FILTER_ALPHA) * filteredPosition.x);
