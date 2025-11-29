@@ -5,19 +5,26 @@ body {
     font-family: sans-serif;
     padding: 20px;
     background-color: #f4f4f4;
-    min-height: 100vh; /* 画面全体を使用 */
+    min-height: 100vh;
+    margin: 0;
 }
 
-/* --- 【修正】メインコンテナ: メーターとボタンを横並びにする --- */
+h1 {
+    margin-top: 0;
+    margin-bottom: 20px;
+}
+
+/* --- メインコンテナ: メーターとボタンを横並びにする --- */
 #main-content {
-    display: flex; /* Flexboxを有効化 */
-    flex-direction: row; /* 要素を横に並べる */
-    width: 100%; /* 画面幅いっぱいを使用 */
-    max-width: 1000px; /* 広い画面での制限 */
-    flex-grow: 1; /* 縦方向のスペースを埋める */
-    justify-content: space-around; /* 要素間にスペースを設ける */
-    align-items: flex-start; /* 上端揃え */
+    display: flex;
+    flex-direction: row;
+    width: 100%;
+    max-width: 1000px;
+    flex-grow: 1;
+    justify-content: center; /* 中央寄せ */
+    align-items: flex-start;
     padding: 0 10px;
+    box-sizing: border-box;
 }
 
 /* --- メーターエリア (左側) --- */
@@ -25,8 +32,8 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
-    flex: 1; /* 左側が柔軟にスペースを占める */
-    min-width: 350px; /* 最小幅を確保 */
+    flex-shrink: 0;
+    margin-right: 40px;
 }
 
 #meter-container {
@@ -40,7 +47,6 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
-    flex-shrink: 0; /* 縮小させない */
 }
 
 /* 十字線 */
@@ -64,22 +70,26 @@ body {
     transition: transform 0.05s ease-out;
 }
 
-/* --- 【新規】コントロールパネル (右側) --- */
+/* --- コントロールパネル (右側) --- */
 #control-panel {
-    flex: 0 0 200px; /* 幅を200pxに固定し、縮小しない */
+    flex: 0 0 200px; 
     padding: 20px;
-    margin-left: 20px;
     display: flex;
     flex-direction: column;
     align-items: center;
     border: 1px solid #ccc;
     border-radius: 8px;
     background-color: #e9e9e9;
+    box-sizing: border-box;
+}
+#control-panel h2 {
+    margin-top: 0;
+    font-size: 1.2em;
 }
 
 #controls {
     display: flex;
-    flex-direction: column; /* ボタンを縦に並べる */
+    flex-direction: column;
     gap: 15px;
     width: 100%;
     margin-top: 15px;
