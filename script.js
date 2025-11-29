@@ -39,7 +39,7 @@ function setupAudio() {
         oscillator.connect(gainNode);
         gainNode.connect(audioContext.destination);
         oscillator.start();
-        gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+        gainNode.gain.setValueAtTime(0, audioContext.currentTime); // 初期状態はミュート
     } catch (e) {
         console.error("Audio Contextのセットアップに失敗しました。", e);
         statusText.textContent = '警告音機能が無効です。';
@@ -126,27 +126,25 @@ function handleMotion(event) {
     }
 
     // 1. 重力成分の除去 (純粋なユーザー加速度を抽出)
-    // X軸はバンプ（上下）の加速度に使われる可能性が高いため、Z軸とY軸に限定
     let userAccelY = accelerationIncludingGravity.y - initialGravity.y;
     let userAccelZ = accelerationIncludingGravity.z - initialGravity.z;
-    // let userAccelX = accelerationIncludingGravity.x - initialGravity.x; 
-
+    
     // 2. ユーザー指定の軸マッピング (Z軸:前後, Y軸:左右)
     
     let accelX_car; // 車の左右方向の加速度 (右:+, 左:-)
     let accelY_car; // 車の前後方向の加速度 (加速:+, 減速:-)
-
-    // 以下の符号は、加速で+accelY_car、右カーブで+accelX_carとなるように調整しています
+    
+    // 加速で+accelY_car、右カーブで+accelX_carとなるように符号調整
     
     if (currentOrientation === 90) { // ホームボタン右側
-        // 前後加速度 (加速:+) -> Z軸。加速で奥(負)になる可能性が高いため反転。
+        // 前後加速度 (加速:+) -> Z軸。反転。
         accelY_car = -userAccelZ; 
-        // 左右加速度 (右:+) -> Y軸。右カーブでY軸がプラスになるか、そのまま。
+        // 左右加速度 (右:+) -> Y軸。そのまま。
         accelX_car = userAccelY; 
     } else if (currentOrientation === -90) { // ホームボタン左側
-        // 前後加速度 (加速:+) -> Z軸。加速で奥(負)になる可能性が高いため反転。
+        // 前後加速度 (加速:+) -> Z軸。反転。
         accelY_car = -userAccelZ;
-        // 左右加速度 (右:+) -> Y軸。右カーブでY軸が負になる可能性が高いため反転。
+        // 左右加速度 (右:+) -> Y軸。反転。
         accelX_car = -userAccelY;
     } else { 
         statusText.textContent = '向きが不正です。横向きにしてください。';
@@ -172,10 +170,11 @@ function handleMotion(event) {
     const normalizedY = accelY_car / MAX_G; // 車の前後加速度 (-1.0 to 1.0)
     
     // 最終的なボールの移動方向設定:
-    // X軸 (左右): 右方向への加速(+normalizedX)のとき、ボールを右(+)に動かす。
-    const offsetX = normalizedX * MAX_DISPLACEMENT; 
     
-    // Y軸 (前後): 加速時(+normalizedY)のとき、ボールを上(-)に動かす。
+    // X軸 (左右): 右方向への加速(+normalizedX)のとき、ボールを左(-)に動かすために反転
+    const offsetX = -normalizedX * MAX_DISPLACEMENT; // 【修正済み】
+    
+    // Y軸 (前後): 加速時(+normalizedY)のとき、ボールを上(-)に動かす。（変更なし）
     const offsetY = -normalizedY * MAX_DISPLACEMENT; 
 
     // ボールがメーターからはみ出さないようにクリップ
