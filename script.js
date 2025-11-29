@@ -1,0 +1,259 @@
+// --- 定数と状態変数 ---
+const MAX_G = 9.80665; 
+const MAX_DISPLACEMENT = 125; // メーターの半径 (250px / 2)
+const FILTER_ALPHA = 0.2; 
+const DECLINE_THRESHOLD = 0.3; 
+const SLIP_PEAK_MIN = 0.4; 
+const COOLDOWN_MS = 3000; 
+const HISTORY_SIZE = 12; 
+const TRACE_DURATION_MS = 1000; 
+const TRACE_INTERVAL_MS = 50;   
+
+// 【修正追加】メーターの最大表示範囲を0.7Gに設定
+const MAX_G_SCALE = 0.7; 
+
+let initialGravity = { x: 0, y: 0, z: 0 }; 
+let isInitialized = false;
+let maxGX = 0;
+let maxGY = 0;
+let lastWarningTime = 0;
+let accelerationHistory = [];
+let currentOrientation = 0; 
+let filteredPosition = { x: 0, y: 0 }; 
+
+let traceHistory = []; 
+let lastTraceTime = 0;
+
+// --- DOM要素 ---
+const ball = document.getElementById('ball');
+const traceContainer = document.getElementById('ball-trace-container'); 
+const statusText = document.getElementById('status-text');
+const maxGxDisplay = document.getElementById('max-gx');
+const maxGyDisplay = document.getElementById('max-gy');
+const initButton = document.getElementById('request-permission');
+const resetButton = document.getElementById('reset-max');
+
+// --- (setupAudio, playWarningSound, requestSensorPermission, setupListeners, updateOrientation, initializeZeroPoint は省略) ---
+function setupAudio() {
+    try {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        oscillator = audioContext.createOscillator();
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(440, audioContext.currentTime);
+        gainNode = audioContext.createGain();
+        gainNode.gain.setValueAtTime(0.5, audioContext.currentTime); 
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        oscillator.start();
+        gainNode.gain.setValueAtTime(0, audioContext.currentTime); 
+    } catch (e) {
+        console.error("Audio Contextのセットアップに失敗しました。", e);
+        statusText.textContent = '警告音機能が無効です。';
+    }
+}
+function playWarningSound() {
+    if (!gainNode || !audioContext) return;
+    gainNode.gain.setValueAtTime(0.5, audioContext.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + 0.3);
+}
+function requestSensorPermission() {
+    if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+        DeviceOrientationEvent.requestPermission()
+            .then(permissionState => {
+                if (permissionState === 'granted') {
+                    setupListeners();
+                } else {
+                    statusText.textContent = 'センサーアクセス拒否';
+                }
+            })
+            .catch(error => {
+                statusText.textContent = 'エラー: ' + error;
+                console.error(error);
+            });
+    } else {
+        setupListeners();
+    }
+}
+function setupListeners() {
+    setupAudio();
+    window.addEventListener('devicemotion', handleMotion);
+    window.addEventListener('orientationchange', updateOrientation);
+    currentOrientation = window.orientation || 0;
+    statusText.textContent = 'センサーアクセス許可済';
+}
+function updateOrientation() {
+    currentOrientation = window.orientation || 0;
+    if (isInitialized) {
+        statusText.textContent = '向きが変わりました。再度初期化してください。';
+        isInitialized = false;
+    }
+}
+function initializeZeroPoint(event) {
+    if (!event || !event.accelerationIncludingGravity) {
+        statusText.textContent = '加速度データ取得不可';
+        return;
+    }
+    currentOrientation = window.orientation || 0;
+    const { x, y, z } = event.accelerationIncludingGravity;
+    initialGravity.x = x;
+    initialGravity.y = y;
+    initialGravity.z = z; 
+    isInitialized = true;
+    maxGX = 0;
+    maxGY = 0;
+    accelerationHistory = [];
+    filteredPosition = { x: 0, y: 0 }; 
+    traceHistory = []; 
+    traceContainer.innerHTML = ''; 
+    statusText.textContent = '初期化完了 (G計測中)';
+    updateDisplay();
+}
+
+// --- メインデータ処理 ---
+
+function handleMotion(event) {
+    const { accelerationIncludingGravity } = event;
+    const currentTime = Date.now(); 
+
+    if (!accelerationIncludingGravity) return;
+
+    if (!isInitialized) {
+        initializeZeroPoint(event);
+        return;
+    }
+
+    // 1. 重力成分の除去
+    let userAccelY = accelerationIncludingGravity.y - initialGravity.y;
+    let userAccelZ = accelerationIncludingGravity.z - initialGravity.z;
+    
+    // 2. 軸マッピング
+    let accelX_car; 
+    let accelY_car; 
+    
+    if (currentOrientation === 90) { 
+        accelY_car = -userAccelZ; 
+        accelX_car = -userAccelY; 
+    } else if (currentOrientation === -90) { 
+        accelY_car = -userAccelZ;
+        accelX_car = userAccelY; 
+    } else { 
+        return;
+    }
+    
+    // 3. G計算、4. 警告、5. 最大G更新
+    const MAX_G_CONST = MAX_G; 
+    const accelMagnitudeG = Math.sqrt(accelX_car * accelX_car + accelY_car * accelY_car) / MAX_G_CONST;
+    updateHistory(accelMagnitudeG);
+    checkAndTriggerSlipWarning(accelMagnitudeG);
+    const gX = Math.abs(accelX_car) / MAX_G_CONST;
+    const gY = Math.abs(accelY_car) / MAX_G_CONST;
+    if (gX > maxGX) maxGX = gX;
+    if (gY > maxGY) maxGY = gY;
+
+
+    // 6. 生のボール位置の計算
+    const normalizedX = accelX_car / MAX_G_CONST; 
+    const normalizedY = accelY_car / MAX_G_CONST; 
+    
+    // 【修正】スケールアップを適用: 0.7Gでメーター端に到達するようにする
+    const rawOffsetX = (normalizedX / MAX_G_SCALE) * MAX_DISPLACEMENT; 
+    const rawOffsetY = -(normalizedY / MAX_G_SCALE) * MAX_DISPLACEMENT; 
+
+    // 7. 指数移動平均 (EMA) フィルタの適用
+    filteredPosition.x = (FILTER_ALPHA * rawOffsetX) + ((1 - FILTER_ALPHA) * filteredPosition.x);
+    filteredPosition.y = (FILTER_ALPHA * rawOffsetY) + ((1 - FILTER_ALPHA) * filteredPosition.y);
+
+
+    // 8. 合成GがMAX_DISPLACEMENT (0.7G) を超えないように制限
+    let clipX = filteredPosition.x;
+    let clipY = filteredPosition.y;
+    
+    const currentDistance = Math.sqrt(clipX * clipX + clipY * clipY);
+
+    if (currentDistance > MAX_DISPLACEMENT) {
+        const scaleFactor = MAX_DISPLACEMENT / currentDistance;
+        clipX *= scaleFactor;
+        clipY *= scaleFactor;
+    }
+
+    // 9. UI更新 (ボールの位置を更新)
+    ball.style.transform = `translate(calc(-50% + ${clipX}px), calc(-50% + ${clipY}px))`;
+    updateDisplay();
+    
+    // 10. 残像の記録と描画ロジックを分離
+    updateTrace(clipX, clipY, currentTime);
+}
+
+
+// --- 残像の管理ロジック ---
+
+function updateTrace(x, y, currentTime) {
+    // 1. 古い残像の削除とフェードアウト開始
+    while (traceHistory.length > 0 && currentTime - traceHistory[0].time > TRACE_DURATION_MS + 100) {
+        const oldDot = traceHistory.shift();
+        if (oldDot.element) {
+            oldDot.element.remove();
+        }
+    }
+
+    // 2. 残像の記録と新しいDOM要素の生成
+    if (currentTime - lastTraceTime > TRACE_INTERVAL_MS) {
+        const traceDot = document.createElement('div');
+        traceDot.className = 'trace-dot';
+        traceDot.style.transform = `translate(calc(125px + ${x}px), calc(125px + ${y}px))`;
+        
+        traceContainer.appendChild(traceDot);
+
+        traceHistory.push({ x, y, time: currentTime, element: traceDot });
+        lastTraceTime = currentTime;
+        
+        // 3. フェードアウトを開始させる
+        requestAnimationFrame(() => {
+            traceHistory.forEach(dot => {
+                if (currentTime - dot.time > 0) {
+                    dot.element.style.opacity = '0';
+                }
+            });
+        });
+    }
+}
+
+// --- (G抜け判定ロジック, UI更新ロジックは省略) ---
+function updateHistory(currentMagnitude) {
+    accelerationHistory.push(currentMagnitude);
+    if (accelerationHistory.length > HISTORY_SIZE) {
+        accelerationHistory.shift();
+    }
+}
+function checkAndTriggerSlipWarning(currentMagnitude) {
+    if (accelerationHistory.length !== HISTORY_SIZE) return;
+    const peakMagnitude = Math.max(...accelerationHistory);
+    const decline = peakMagnitude - currentMagnitude;
+    const currentTime = Date.now();
+    if (decline >= DECLINE_THRESHOLD && peakMagnitude >= SLIP_PEAK_MIN && (currentTime - lastWarningTime) > COOLDOWN_MS) {
+        playWarningSound();
+        lastWarningTime = currentTime;
+        console.log(`🚨 G抜け警告！ ピーク: ${peakMagnitude.toFixed(2)} G -> 現在: ${currentMagnitude.toFixed(2)} G`);
+    }
+}
+function updateDisplay() {
+    maxGxDisplay.textContent = maxGX.toFixed(2);
+    maxGyDisplay.textContent = maxGY.toFixed(2);
+}
+function resetMaxG() {
+    maxGX = 0;
+    maxGY = 0;
+    updateDisplay();
+}
+
+// イベントリスナーの登録
+window.onload = () => {
+    initButton.addEventListener('click', requestSensorPermission);
+    resetButton.addEventListener('click', resetMaxG);
+    
+    if (typeof DeviceOrientationEvent.requestPermission !== 'function') {
+        requestSensorPermission();
+    }
+    
+    updateOrientation();
+};
