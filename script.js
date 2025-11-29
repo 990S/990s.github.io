@@ -6,13 +6,14 @@ const SLIP_PEAK_MIN = 0.4; // 判定前の最小G
 const COOLDOWN_MS = 3000; // 警告音のクールダウン時間 (ms)
 const HISTORY_SIZE = 12; // 加速度履歴サイズ (約0.2秒分: 60FPS時)
 
-let initialGravity = { x: 0, y: 0 };
+// initialGravityには、静止時のX, Y, Z軸の重力成分全てを記録します
+let initialGravity = { x: 0, y: 0, z: 0 }; 
 let isInitialized = false;
 let maxGX = 0;
 let maxGY = 0;
 let lastWarningTime = 0;
 let accelerationHistory = [];
-let currentOrientation = 0; // 0:ポートレート, 90/-90:ランドスケープ
+let currentOrientation = 0;
 
 // --- DOM要素 ---
 const ball = document.getElementById('ball');
@@ -22,7 +23,7 @@ const maxGyDisplay = document.getElementById('max-gy');
 const initButton = document.getElementById('request-permission');
 const resetButton = document.getElementById('reset-max');
 
-// --- サウンドプール (警告音はブラウザのAudioContextを使用) ---
+// --- サウンドプール ---
 let audioContext;
 let oscillator;
 let gainNode;
@@ -30,20 +31,15 @@ let gainNode;
 function setupAudio() {
     try {
         audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        
-        // 警告音の生成 (シンプルなトーン)
         oscillator = audioContext.createOscillator();
         oscillator.type = 'sine';
         oscillator.frequency.setValueAtTime(440, audioContext.currentTime);
-        
         gainNode = audioContext.createGain();
         gainNode.gain.setValueAtTime(0.5, audioContext.currentTime); 
-        
         oscillator.connect(gainNode);
         gainNode.connect(audioContext.destination);
-        
         oscillator.start();
-        gainNode.gain.setValueAtTime(0, audioContext.currentTime); // 初期状態はミュート
+        gainNode.gain.setValueAtTime(0, audioContext.currentTime);
     } catch (e) {
         console.error("Audio Contextのセットアップに失敗しました。", e);
         statusText.textContent = '警告音機能が無効です。';
@@ -52,17 +48,14 @@ function setupAudio() {
 
 function playWarningSound() {
     if (!gainNode || !audioContext) return;
-    
-    // 音を急に出し、すぐに止める (警告音)
     gainNode.gain.setValueAtTime(0.5, audioContext.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + 0.3); // 0.3秒で減衰
+    gainNode.gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + 0.3);
 }
 
 
 // --- センサーアクセスと初期化 ---
 
 function requestSensorPermission() {
-    // 【iOS 13+ 対応】
     if (typeof DeviceOrientationEvent.requestPermission === 'function') {
         DeviceOrientationEvent.requestPermission()
             .then(permissionState => {
@@ -77,7 +70,6 @@ function requestSensorPermission() {
                 console.error(error);
             });
     } else {
-        // その他のブラウザ (Android/旧iOS)
         setupListeners();
     }
 }
@@ -86,17 +78,12 @@ function setupListeners() {
     setupAudio();
     window.addEventListener('devicemotion', handleMotion);
     window.addEventListener('orientationchange', updateOrientation);
-    statusText.textContent = '計測開始 (初期化してください)';
-    
-    // センサーリスナーを登録したら、すぐに現在の向きを取得して初期化
     currentOrientation = window.orientation || 0;
     statusText.textContent = 'センサーアクセス許可済';
 }
 
 function updateOrientation() {
-    // デバイスの向き (0, 90, -90, 180) を取得
     currentOrientation = window.orientation || 0;
-    // 向きが変わったら再初期化を促す
     if (isInitialized) {
         statusText.textContent = '向きが変わりました。再度初期化してください。';
         isInitialized = false;
@@ -109,16 +96,14 @@ function initializeZeroPoint(event) {
         return;
     }
     
-    // 1. 初期化時のデバイスの向きを取得
     currentOrientation = window.orientation || 0;
 
-    // 2. 現在の重力成分を記録する
-    const { x, y } = event.accelerationIncludingGravity;
-
+    // 【修正】静止時のX, Y, Z軸の重力成分すべてを記録
+    const { x, y, z } = event.accelerationIncludingGravity;
     initialGravity.x = x;
     initialGravity.y = y;
+    initialGravity.z = z; // Z軸の重力成分も記録
 
-    // 3. 状態を更新
     isInitialized = true;
     maxGX = 0;
     maxGY = 0;
@@ -136,35 +121,35 @@ function handleMotion(event) {
     if (!accelerationIncludingGravity) return;
 
     if (!isInitialized) {
-        // 初期化がまだの場合は、最初のデータを使って初期化
         initializeZeroPoint(event);
         return;
     }
 
-    // 1. デバイス座標系での純粋な加速度を計算 (傾き補正)
-    let rawAccelX = accelerationIncludingGravity.x - initialGravity.x;
-    let rawAccelY = accelerationIncludingGravity.y - initialGravity.y;
+    // 1. 重力成分の除去 (純粋なユーザー加速度を抽出)
+    let userAccelX = accelerationIncludingGravity.x - initialGravity.x;
+    let userAccelY = accelerationIncludingGravity.y - initialGravity.y;
+    // Z軸は車の前後左右の動きに影響しないため、通常無視しても良いが、ここでは純粋な加速度を計算する
+    // let userAccelZ = accelerationIncludingGravity.z - initialGravity.z; 
+
+    // 2. 【重要修正】ダッシュボード垂直設置時の軸マッピング
     
     let accelX_screen; // 左右（画面横）方向の加速度
     let accelY_screen; // 前後（画面縦）方向の加速度
 
-    // 2. 【重要】デバイスの向きに応じて軸をマッピングし、画面座標系に固定
-    
-    if (currentOrientation === 0 || currentOrientation === 180) { // ポートレート (縦向き)
-        // 左右 = デバイスX軸, 前後 = デバイスY軸
-        accelX_screen = rawAccelX;
-        accelY_screen = rawAccelY * (currentOrientation === 0 ? 1 : -1); 
-        
-    } else { // ランドスケープ (横向き: 90 または -90)
-        // 左右 (画面横) <-> デバイスY軸, 前後 (画面縦) <-> デバイスX軸
-        
-        if (currentOrientation === 90) { // ホームボタン右側 (標準的な車載設置)
-            accelX_screen = rawAccelY; 
-            accelY_screen = -rawAccelX; // 加速で上に動くように調整
-        } else { // ホームボタン左側
-            accelX_screen = -rawAccelY;
-            accelY_screen = rawAccelX;
-        }
+    // iPhoneは横向き（ランドスケープ）で設置されていることを前提とする
+    if (currentOrientation === 90) { // ホームボタン右側を右とする（一般的な車載配置）
+        // 左右 (画面横) の動き = デバイスX軸 (userAccelX)
+        accelX_screen = userAccelX; 
+        // 前後 (画面縦) の動き = デバイスY軸 (-userAccelY)。加速でボールが上に動くように調整。
+        accelY_screen = -userAccelY; 
+    } else if (currentOrientation === -90) { // ホームボタン左側
+        // 左右 (画面横) の動き = -userAccelX
+        accelX_screen = -userAccelX;
+        // 前後 (画面縦) の動き = userAccelY
+        accelY_screen = userAccelY;
+    } else { // ポートレートまたは逆さまの場合はエラーを出すか、標準の縦向きとして扱う
+        statusText.textContent = '向きが不正です。横向きにしてください。';
+        return;
     }
     
     // 3. 全加速度の大きさ（G単位）を計算
@@ -186,14 +171,14 @@ function handleMotion(event) {
     const normalizedY = Math.max(-1, Math.min(1, accelY_screen / MAX_G));
     
     const offsetX = normalizedX * MAX_DISPLACEMENT;
-    const offsetY = -normalizedY * MAX_DISPLACEMENT; // Y軸は画面座標に合わせて反転
+    const offsetY = normalizedY * MAX_DISPLACEMENT; // 【修正】Y軸の反転を調整。加速（+Y）で上に動くように、オフセットをそのまま使用する。
 
     ball.style.transform = `translate(calc(-50% + ${offsetX}px), calc(-50% + ${offsetY}px))`;
     updateDisplay();
 }
 
 
-// --- G抜けスリップ判定ロジック ---
+// --- G抜けスリップ判定ロジック (変更なし) ---
 
 function updateHistory(currentMagnitude) {
     accelerationHistory.push(currentMagnitude);
@@ -209,7 +194,6 @@ function checkAndTriggerSlipWarning(currentMagnitude) {
     const decline = peakMagnitude - currentMagnitude;
     const currentTime = Date.now();
 
-    // 判定条件: 減少幅が閾値を超え、かつクールダウン期間外である
     if (decline >= DECLINE_THRESHOLD && peakMagnitude >= SLIP_PEAK_MIN && (currentTime - lastWarningTime) > COOLDOWN_MS) {
         playWarningSound();
         lastWarningTime = currentTime;
@@ -217,7 +201,7 @@ function checkAndTriggerSlipWarning(currentMagnitude) {
     }
 }
 
-// --- UI表示とイベントリスナー ---
+// --- UI表示とイベントリスナー (変更なし) ---
 
 function updateDisplay() {
     maxGxDisplay.textContent = maxGX.toFixed(2);
@@ -235,11 +219,9 @@ window.onload = () => {
     initButton.addEventListener('click', requestSensorPermission);
     resetButton.addEventListener('click', resetMaxG);
     
-    // 非iOS環境での自動初期化と計測開始
     if (typeof DeviceOrientationEvent.requestPermission !== 'function') {
         requestSensorPermission();
     }
     
-    // ページロード時に現在の向きを取得
     updateOrientation();
 };
