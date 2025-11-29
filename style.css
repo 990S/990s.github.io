@@ -96,10 +96,10 @@ h1 {
     position: absolute;
     width: 15px; 
     height: 15px;
+    /* ★ここを変更します★ 青色 (R:0, G:0, B:255, 不透明度:1.0) に設定 */
     background-color: rgba(0, 0, 255, 1.0); 
     border-radius: 50%;
     transform: translate(-50%, -50%); 
-    /* ★追加★ 1秒かけて透明度が変化するように指定 */
     transition: opacity 1.0s linear; 
 }
 
