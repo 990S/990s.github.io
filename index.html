@@ -8,22 +8,29 @@
 </head>
 <body>
     <h1>Web G-Force メーター</h1>
-
-    <div id="meter-container">
-        <div id="ball"></div>
-        <div id="crosshair-h"></div>
-        <div id="crosshair-v"></div>
-    </div>
     
-    <div id="status">
-        <p>状態: <span id="status-text">待機中</span></p>
-        <p>Max G (X): <span id="max-gx">0.00</span></p>
-        <p>Max G (Y): <span id="max-gy">0.00</span></p>
-    </div>
+    <div id="main-content">
+        <div id="meter-area">
+            <div id="meter-container">
+                <div id="ball"></div>
+                <div id="crosshair-h"></div>
+                <div id="crosshair-v"></div>
+            </div>
+            
+            <div id="status">
+                <p>状態: <span id="status-text">待機中</span></p>
+                <p>Max G (X): <span id="max-gx">0.00</span></p>
+                <p>Max G (Y): <span id="max-gy">0.00</span></p>
+            </div>
+        </div>
 
-    <div id="controls">
-        <button id="request-permission">センサー許可/初期化</button>
-        <button id="reset-max">最大Gリセット</button>
+        <div id="control-panel">
+            <h2>操作・記録</h2>
+            <div id="controls">
+                <button id="request-permission">センサー許可/初期化</button>
+                <button id="reset-max">最大Gリセット</button>
+            </div>
+        </div>
     </div>
 
     <script src="script.js"></script>
