@@ -39,7 +39,7 @@ function setupAudio() {
         oscillator.connect(gainNode);
         gainNode.connect(audioContext.destination);
         oscillator.start();
-        gainNode.gain.setValueAtTime(0, audioContext.currentTime); // 初期状態はミュート
+        gainNode.gain.setValueAtTime(0, audioContext.currentTime);
     } catch (e) {
         console.error("Audio Contextのセットアップに失敗しました。", e);
         statusText.textContent = '警告音機能が無効です。';
@@ -126,35 +126,27 @@ function handleMotion(event) {
     }
 
     // 1. 重力成分の除去 (純粋なユーザー加速度を抽出)
-    // Z軸とY軸のみを使用
+    // X軸はバンプ（上下）の加速度に使われる可能性が高いため、Z軸とY軸に限定
     let userAccelY = accelerationIncludingGravity.y - initialGravity.y;
     let userAccelZ = accelerationIncludingGravity.z - initialGravity.z;
-    // let userAccelX = accelerationIncludingGravity.x - initialGravity.x; // X軸は無視
+    // let userAccelX = accelerationIncludingGravity.x - initialGravity.x; 
 
-    // 2. ユーザー指定の軸マッピング
+    // 2. ユーザー指定の軸マッピング (Z軸:前後, Y軸:左右)
     
     let accelX_car; // 車の左右方向の加速度 (右:+, 左:-)
     let accelY_car; // 車の前後方向の加速度 (加速:+, 減速:-)
-    
-    // 【重要修正】
-    // 前後加速度 (加速/減速) -> Z軸を使用
-    // 左右加速度 (旋回G) -> Y軸を使用
-    
-    // 垂直設置時、Z軸の符号は「画面奥へ」が正の方向。加速は「奥へ」かかるため、加速でZ軸はマイナスになる可能性が高い。
-    // Y軸の符号は「長辺方向」。右カーブでY軸がプラス/マイナスどちらになるかは実機依存。
 
-    // 試行錯誤に基づき、最も可能性の高いマッピングを設定します
-    // (加速で+accelY_car、右カーブで+accelX_carとなるように符号調整)
+    // 以下の符号は、加速で+accelY_car、右カーブで+accelX_carとなるように調整しています
     
     if (currentOrientation === 90) { // ホームボタン右側
-        // 前後加速度 (加速:+) -> Z軸。加速で奥(負)になるなら、符号を反転させる。
+        // 前後加速度 (加速:+) -> Z軸。加速で奥(負)になる可能性が高いため反転。
         accelY_car = -userAccelZ; 
-        // 左右加速度 (右:+) -> Y軸。右カーブでプラスになるなら、そのまま。
+        // 左右加速度 (右:+) -> Y軸。右カーブでY軸がプラスになるか、そのまま。
         accelX_car = userAccelY; 
     } else if (currentOrientation === -90) { // ホームボタン左側
-        // 前後加速度 (加速:+) -> Z軸。加速で奥(負)になるなら、符号を反転させる。
+        // 前後加速度 (加速:+) -> Z軸。加速で奥(負)になる可能性が高いため反転。
         accelY_car = -userAccelZ;
-        // 左右加速度 (右:+) -> Y軸。右カーブでY軸が負になるなら、符号を反転させる。
+        // 左右加速度 (右:+) -> Y軸。右カーブでY軸が負になる可能性が高いため反転。
         accelX_car = -userAccelY;
     } else { 
         statusText.textContent = '向きが不正です。横向きにしてください。';
@@ -180,7 +172,6 @@ function handleMotion(event) {
     const normalizedY = accelY_car / MAX_G; // 車の前後加速度 (-1.0 to 1.0)
     
     // 最終的なボールの移動方向設定:
-    
     // X軸 (左右): 右方向への加速(+normalizedX)のとき、ボールを右(+)に動かす。
     const offsetX = normalizedX * MAX_DISPLACEMENT; 
     
