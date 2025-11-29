@@ -52,14 +52,14 @@ h1 {
 }
 
 /* ---------------------------------------------------- */
-/* Gフォース目盛 (同心円) */
+/* Gフォース目盛 (0.7Gスケールに調整) */
 /* ---------------------------------------------------- */
-/* 0.6Gの目盛 (直径 150px = 75px * 2) */
+/* 0.6Gの目盛 (直径 214.3px) */
 #meter-container::before {
     content: '';
     position: absolute;
-    width: 150px; 
-    height: 150px;
+    width: 214px; /* 125px * (0.6 / 0.7) * 2 */
+    height: 214px;
     border: 1px dashed rgba(0, 122, 255, 0.5);
     border-radius: 50%;
     pointer-events: none;
@@ -67,12 +67,12 @@ h1 {
     z-index: 1; 
 }
 
-/* 0.3Gの目盛 (直径 75px = 37.5px * 2) */
+/* 0.3Gの目盛 (直径 107.1px) */
 #meter-container::after {
     content: '';
     position: absolute;
-    width: 75px; 
-    height: 75px;
+    width: 107px; /* 125px * (0.3 / 0.7) * 2 */
+    height: 107px;
     border: 1px dashed rgba(0, 122, 255, 0.5);
     border-radius: 50%;
     pointer-events: none;
@@ -81,22 +81,22 @@ h1 {
 }
 /* ---------------------------------------------------- */
 
-/* 【修正】残像を格納するコンテナ */
+/* 残像を格納するコンテナ */
 #ball-trace-container {
     position: absolute;
     width: 100%;
     height: 100%;
     top: 0;
     left: 0;
-    z-index: 3; /* 目盛りより手前、十字線より奥に配置 */
+    z-index: 3; 
 }
 
-/* 【修正】個々の残像のスタイル */
+/* 個々の残像のスタイル */
 .trace-dot {
     position: absolute;
     width: 15px; 
     height: 15px;
-    /* ★ここを変更します★ 青色 (R:0, G:0, B:255, 不透明度:1.0) に設定 */
+    /* ★青色に設定★ */
     background-color: rgba(0, 0, 255, 1.0); 
     border-radius: 50%;
     transform: translate(-50%, -50%); 
