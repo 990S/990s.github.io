@@ -172,7 +172,7 @@ function handleMotion(event) {
     // 最終的なボールの移動方向設定:
     
     // X軸 (左右): 右方向への加速(+normalizedX)のとき、ボールを右(+)に動かすために反転を解除
-    const offsetX = -normalizedX * MAX_DISPLACEMENT; // 【修正】符号を再反転（元に戻す）
+    const offsetX = normalizedX * MAX_DISPLACEMENT; // 【修正】符号を再反転（元に戻す）
     
     // Y軸 (前後): 加速時(+normalizedY)のとき、ボールを上(-)に動かす。（変更なし）
     const offsetY = -normalizedY * MAX_DISPLACEMENT; 
