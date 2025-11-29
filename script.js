@@ -101,7 +101,7 @@ function initializeZeroPoint(event) {
     // 静止時のX, Y, Z軸の重力成分すべてを記録
     const { x, y, z } = event.accelerationIncludingGravity;
     initialGravity.x = x;
-    initialGravity.y = y;
+    initialGravity.y = -y;
     initialGravity.z = z; 
 
     isInitialized = true;
