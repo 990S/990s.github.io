@@ -101,7 +101,7 @@ function initializeZeroPoint(event) {
     // 静止時のX, Y, Z軸の重力成分すべてを記録
     const { x, y, z } = event.accelerationIncludingGravity;
     initialGravity.x = x;
-    initialGravity.y = -y;
+    initialGravity.y = y;
     initialGravity.z = z; 
 
     isInitialized = true;
@@ -140,12 +140,12 @@ function handleMotion(event) {
         // 前後加速度 (加速:+) -> Z軸。反転。
         accelY_car = -userAccelZ; 
         // 左右加速度 (右:+) -> Y軸。そのまま。
-        accelX_car = userAccelY; 
+        accelX_car = -userAccelY; 
     } else if (currentOrientation === -90) { // ホームボタン左側
         // 前後加速度 (加速:+) -> Z軸。反転。
         accelY_car = -userAccelZ;
         // 左右加速度 (右:+) -> Y軸。反転。
-        accelX_car = -userAccelY;
+        accelX_car = userAccelY;
     } else { 
         statusText.textContent = '向きが不正です。横向きにしてください。';
         return;
@@ -166,7 +166,7 @@ function handleMotion(event) {
     if (gY > maxGY) maxGY = gY;
 
     // 6. ボールの位置の計算とUI更新
-    const normalizedX = accelX_car / MAX_G; // 車の左右加速度 (-1.0 to 1.0)
+    const normalizedX = -accelX_car / MAX_G; // 車の左右加速度 (-1.0 to 1.0)
     const normalizedY = accelY_car / MAX_G; // 車の前後加速度 (-1.0 to 1.0)
     
     // 最終的なボールの移動方向設定:
