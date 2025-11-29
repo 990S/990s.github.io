@@ -1,24 +1,29 @@
 // --- 定数と状態変数 ---
-const MAX_G = 9.80665; // 1G (m/s^2)
+const MAX_G = 9.80665; 
 const MAX_DISPLACEMENT = 125; // メーターの半径 (250px / 2)
 const FILTER_ALPHA = 0.2; // EMA平滑化係数
-const DECLINE_THRESHOLD = 0.3; // G抜け判定の減少幅 (G)
-const SLIP_PEAK_MIN = 0.4; // 判定前の最小G
-const COOLDOWN_MS = 3000; // 警告音のクールダウン時間 (ms)
-const HISTORY_SIZE = 12; // 加速度履歴サイズ (約0.2秒分: 60FPS時)
+const DECLINE_THRESHOLD = 0.3; 
+const SLIP_PEAK_MIN = 0.4; 
+const COOLDOWN_MS = 3000; 
+const HISTORY_SIZE = 12; 
+const TRACE_DURATION_MS = 1000; // 【追加】残像が残る時間 (1秒)
+const TRACE_INTERVAL_MS = 50;   // 【追加】残像を記録する間隔 (50msごと)
 
-// initialGravityには、静止時のX, Y, Z軸の重力成分全てを記録します
 let initialGravity = { x: 0, y: 0, z: 0 }; 
 let isInitialized = false;
 let maxGX = 0;
 let maxGY = 0;
 let lastWarningTime = 0;
 let accelerationHistory = [];
-let currentOrientation = 0; // 0:ポートレート, 90/-90:ランドスケープ
+let currentOrientation = 0; 
 let filteredPosition = { x: 0, y: 0 }; 
+
+let traceHistory = []; // 【追加】残像データ (位置とタイムスタンプ)
+let lastTraceTime = 0;
 
 // --- DOM要素 ---
 const ball = document.getElementById('ball');
+const traceContainer = document.getElementById('ball-trace-container'); // 【追加】
 const statusText = document.getElementById('status-text');
 const maxGxDisplay = document.getElementById('max-gx');
 const maxGyDisplay = document.getElementById('max-gy');
@@ -110,7 +115,8 @@ function initializeZeroPoint(event) {
     maxGX = 0;
     maxGY = 0;
     accelerationHistory = [];
-    filteredPosition = { x: 0, y: 0 }; // フィルタ位置も初期化
+    filteredPosition = { x: 0, y: 0 }; 
+    traceHistory = []; // 【修正】残像履歴も初期化
 
     statusText.textContent = '初期化完了 (G計測中)';
     updateDisplay();
@@ -120,7 +126,8 @@ function initializeZeroPoint(event) {
 
 function handleMotion(event) {
     const { accelerationIncludingGravity } = event;
-    
+    const currentTime = Date.now(); 
+
     if (!accelerationIncludingGravity) return;
 
     if (!isInitialized) {
@@ -132,22 +139,16 @@ function handleMotion(event) {
     let userAccelY = accelerationIncludingGravity.y - initialGravity.y;
     let userAccelZ = accelerationIncludingGravity.z - initialGravity.z;
     
-    // 2. 軸マッピング (Z軸:前後, Y軸:左右)
+    // 2. 軸マッピング
     
-    let accelX_car; // 車の左右方向の加速度 (右:+, 左:-)
-    let accelY_car; // 車の前後方向の加速度 (加速:+, 減速:-)
+    let accelX_car; 
+    let accelY_car; 
     
-    // ホームボタンの向きに応じた符号調整 (両対応ロジック)
-    
-    if (currentOrientation === 90) { // ホームボタン右側
-        // 前後
+    if (currentOrientation === 90) { 
         accelY_car = -userAccelZ; 
-        // 左右
         accelX_car = -userAccelY; 
-    } else if (currentOrientation === -90) { // ホームボタン左側
-        // 前後
+    } else if (currentOrientation === -90) { 
         accelY_car = -userAccelZ;
-        // 左右
         accelX_car = userAccelY; 
     } else { 
         return;
@@ -168,28 +169,60 @@ function handleMotion(event) {
     if (gY > maxGY) maxGY = gY;
 
     // 6. 生のボール位置の計算
-    const normalizedX = accelX_car / MAX_G; // 車の左右加速度 (-1.0 to 1.0)
-    const normalizedY = accelY_car / MAX_G; // 車の前後加速度 (-1.0 to 1.0)
+    const normalizedX = accelX_car / MAX_G; 
+    const normalizedY = accelY_car / MAX_G; 
     
-    // 生のボール移動量 (px)
     const rawOffsetX = normalizedX * MAX_DISPLACEMENT; 
     const rawOffsetY = -normalizedY * MAX_DISPLACEMENT; 
 
     // 7. 指数移動平均 (EMA) フィルタの適用
-    
-    // X軸の平滑化
     filteredPosition.x = (FILTER_ALPHA * rawOffsetX) + ((1 - FILTER_ALPHA) * filteredPosition.x);
-    // Y軸の平滑化
     filteredPosition.y = (FILTER_ALPHA * rawOffsetY) + ((1 - FILTER_ALPHA) * filteredPosition.y);
 
 
     // 8. ボールがメーターからはみ出さないようにクリップ
     const clipX = Math.max(-MAX_DISPLACEMENT, Math.min(MAX_DISPLACEMENT, filteredPosition.x));
     const clipY = Math.max(-MAX_DISPLACEMENT, Math.min(MAX_DISPLACEMENT, filteredPosition.y));
-
-    // 9. UI更新
+    
+    // 9. UI更新 (ボールの位置を更新)
     ball.style.transform = `translate(calc(-50% + ${clipX}px), calc(-50% + ${clipY}px))`;
     updateDisplay();
+    
+    // 10. 【追加】残像の記録と描画
+    if (currentTime - lastTraceTime > TRACE_INTERVAL_MS) {
+        traceHistory.push({ x: clipX, y: clipY, time: currentTime });
+        lastTraceTime = currentTime;
+    }
+    renderTrace(currentTime); // 毎フレーム描画を呼び出す
+}
+
+
+// --- 【追加】残像描画ロジック ---
+
+function renderTrace(currentTime) {
+    // 古い残像を削除
+    while (traceHistory.length > 0 && currentTime - traceHistory[0].time > TRACE_DURATION_MS) {
+        traceHistory.shift();
+    }
+    
+    // コンテナ内の既存の残像をクリア（再描画が重い場合はDOMプールを使うが、ここではシンプルに毎回クリア）
+    traceContainer.innerHTML = '';
+
+    // 新しい残像を描画
+    traceHistory.forEach(dot => {
+        const age = currentTime - dot.time;
+        // 時間経過で 1.0 から 0.0 まで透明度を減少させる
+        const opacity = 1.0 - (age / TRACE_DURATION_MS);
+        
+        const traceDot = document.createElement('div');
+        traceDot.className = 'trace-dot';
+        
+        // メーターコンテナの幅/高さ (250px) の中心 (125px) を基準に位置を設定
+        traceDot.style.transform = `translate(calc(125px + ${dot.x}px), calc(125px + ${dot.y}px))`;
+        traceDot.style.opacity = opacity;
+        
+        traceContainer.appendChild(traceDot);
+    });
 }
 
 
