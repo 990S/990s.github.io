@@ -126,25 +126,36 @@ function handleMotion(event) {
     }
 
     // 1. 重力成分の除去 (純粋なユーザー加速度を抽出)
-    let userAccelX = accelerationIncludingGravity.x - initialGravity.x;
+    // Z軸とY軸のみを使用
     let userAccelY = accelerationIncludingGravity.y - initialGravity.y;
+    let userAccelZ = accelerationIncludingGravity.z - initialGravity.z;
+    // let userAccelX = accelerationIncludingGravity.x - initialGravity.x; // X軸は無視
 
-    // 2. ダッシュボード垂直設置時の軸マッピング
+    // 2. ユーザー指定の軸マッピング
     
     let accelX_car; // 車の左右方向の加速度 (右:+, 左:-)
     let accelY_car; // 車の前後方向の加速度 (加速:+, 減速:-)
+    
+    // 【重要修正】
+    // 前後加速度 (加速/減速) -> Z軸を使用
+    // 左右加速度 (旋回G) -> Y軸を使用
+    
+    // 垂直設置時、Z軸の符号は「画面奥へ」が正の方向。加速は「奥へ」かかるため、加速でZ軸はマイナスになる可能性が高い。
+    // Y軸の符号は「長辺方向」。右カーブでY軸がプラス/マイナスどちらになるかは実機依存。
 
-    // iPhoneは横向き（ランドスケープ）で設置されていることを前提とする
+    // 試行錯誤に基づき、最も可能性の高いマッピングを設定します
+    // (加速で+accelY_car、右カーブで+accelX_carとなるように符号調整)
+    
     if (currentOrientation === 90) { // ホームボタン右側
-        // 左右（車）の動き = デバイスX軸。右カーブ(+X)でボールを右(+)に動かしたいので、X軸は反転が必要。
-        accelX_car = -userAccelX; 
-        // 前後（車）の動き = デバイスY軸。加速時(+Y)でボールを上(-)に動かしたいので、Y軸はそのまま。
-        accelY_car = userAccelY; 
+        // 前後加速度 (加速:+) -> Z軸。加速で奥(負)になるなら、符号を反転させる。
+        accelY_car = -userAccelZ; 
+        // 左右加速度 (右:+) -> Y軸。右カーブでプラスになるなら、そのまま。
+        accelX_car = userAccelY; 
     } else if (currentOrientation === -90) { // ホームボタン左側
-        // 左右（車）の動き = -userAccelX。右カーブ(+X)でボールを右(+)に動かしたいので、そのまま。
-        accelX_car = userAccelX;
-        // 前後（車）の動き = userAccelY。加速時(+Y)でボールを上(-)に動かしたいので、Y軸は反転が必要。
-        accelY_car = -userAccelY;
+        // 前後加速度 (加速:+) -> Z軸。加速で奥(負)になるなら、符号を反転させる。
+        accelY_car = -userAccelZ;
+        // 左右加速度 (右:+) -> Y軸。右カーブでY軸が負になるなら、符号を反転させる。
+        accelX_car = -userAccelY;
     } else { 
         statusText.textContent = '向きが不正です。横向きにしてください。';
         return;
