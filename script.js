@@ -168,12 +168,12 @@ function handleMotion(event) {
     const normalizedX = accelX_screen / MAX_G;
     const normalizedY = accelY_screen / MAX_G;
     
-    // 【重要修正】ボールの動きの方向をすべて反転させる
-    // 画面X軸: +G(右カーブで左G) のときに、ボールを右(+)に動かしたい -> 符号を反転させる (-normalizedX)
-    // 画面Y軸: +G(加速で後ろG) のときに、ボールを下(+)に動かしたい -> 符号を反転させる (-normalizedY)
+    // 【最終的な反転処理】ボールの動きをすべて逆転させる
     
-    const offsetX = -normalizedX * MAX_DISPLACEMENT; // 左右反転
-    const offsetY = -normalizedY * MAX_DISPLACEMENT; // 前後反転
+    // X軸の反転: 左G発生時(+normalizedX)に、ボールを右(+)に動かしたい -> 符号を反転させる
+    const offsetX = -normalizedX * MAX_DISPLACEMENT; 
+    // Y軸の反転: 加速時(+normalizedY)に、ボールを下(+)に動かしたい -> 符号を反転させる
+    const offsetY = -normalizedY * MAX_DISPLACEMENT; 
 
     // ボールがメーターからはみ出さないようにクリップ
     const clipX = Math.max(-MAX_DISPLACEMENT, Math.min(MAX_DISPLACEMENT, offsetX));
