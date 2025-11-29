@@ -1,39 +1,13 @@
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>G-Force Web Meter</title>
-    <link rel="stylesheet" href="style.css">
-</head>
-<body>
-    <h1>Web G-Force メーター</h1>
-    
-    <div id="main-content">
-        <div id="meter-area">
-            <div id="meter-container">
-                <div id="ball"></div>
-                <div id="crosshair-h"></div>
-                <div id="crosshair-v"></div>
-            </div>
-            
-            </div>
-
-        <div id="control-panel">
-            <h2>操作・記録</h2>
-            <div id="controls">
-                <button id="request-permission">センサー許可/初期化</button>
-                <button id="reset-max">最大Gリセット</button>
-            </div>
-            
-            <div id="status">
-                <p>状態: <span id="status-text">待機中</span></p>
-                <p>Max G (X:左右): <span id="max-gx">0.00</span></p>
-                <p>Max G (Y:前後): <span id="max-gy">0.00</span></p>
-            </div>
-        </div>
+<div id="control-panel">
+    <h2>操作・記録</h2>
+    <div id="controls">
+        <button id="request-permission">センサー許可/初期化</button>
+        <button id="reset-max">最大Gリセット</button>
     </div>
-
-    <script src="script.js"></script>
-</body>
-</html>
+    
+    <div id="status">
+        <p>状態: <span id="status-text">待機中</span></p>
+        <p>Max G (X:左右): <span id="max-gx">0.00</span></p>
+        <p>Max G (Y:前後): <span id="max-gy">0.00</span></p>
+    </div>
+</div>
