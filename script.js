@@ -1,6 +1,7 @@
 // --- 定数と状態変数 ---
 const MAX_G = 9.80665; // 1G (m/s^2)
 const MAX_DISPLACEMENT = 150; // メーターの半径 (CSSのwidth/2)
+const FILTER_ALPHA = 0.2; // 【追加】EMA平滑化係数。小さいほど滑らかになる (0.05～0.5程度で調整)
 const DECLINE_THRESHOLD = 0.3; // G抜け判定の減少幅 (G)
 const SLIP_PEAK_MIN = 0.4; // 判定前の最小G
 const COOLDOWN_MS = 3000; // 警告音のクールダウン時間 (ms)
@@ -14,6 +15,9 @@ let maxGY = 0;
 let lastWarningTime = 0;
 let accelerationHistory = [];
 let currentOrientation = 0; // 0:ポートレート, 90/-90:ランドスケープ
+
+// 【追加】フィルタリング後のボール位置を保持する変数
+let filteredPosition = { x: 0, y: 0 }; 
 
 // --- DOM要素 ---
 const ball = document.getElementById('ball');
@@ -108,6 +112,7 @@ function initializeZeroPoint(event) {
     maxGX = 0;
     maxGY = 0;
     accelerationHistory = [];
+    filteredPosition = { x: 0, y: 0 }; // フィルタ位置も初期化
 
     statusText.textContent = '初期化完了 (G計測中)';
     updateDisplay();
@@ -134,22 +139,20 @@ function handleMotion(event) {
     let accelX_car; // 車の左右方向の加速度 (右:+, 左:-)
     let accelY_car; // 車の前後方向の加速度 (加速:+, 減速:-)
     
-    // ここでホームボタンの向きに応じた符号調整を行います
+    // ホームボタンの向きに応じた符号調整 (両対応ロジック)
     
     if (currentOrientation === 90) { // ホームボタン右側
-        // 前後加速度 (加速:+) -> Z軸。反転。（-90度と同じ）
+        // 前後
         accelY_car = -userAccelZ; 
-        
-        // 左右加速度 (右:+) -> Y軸。-90度と逆の符号であると推測されるため、反転。【修正】
+        // 左右
         accelX_car = -userAccelY; 
-    } else if (currentOrientation === -90) { // ホームボタン左側 (動作確認済み)
-        // 前後加速度 (加速:+) -> Z軸。反転。
+    } else if (currentOrientation === -90) { // ホームボタン左側
+        // 前後
         accelY_car = -userAccelZ;
-        
-        // 左右加速度 (右:+) -> Y軸。そのまま。
+        // 左右
         accelX_car = userAccelY; 
     } else { 
-        statusText.textContent = '向きが不正です。横向きにしてください。';
+        // 横向きでない場合は処理をスキップ
         return;
     }
     
@@ -167,22 +170,27 @@ function handleMotion(event) {
     if (gX > maxGX) maxGX = gX;
     if (gY > maxGY) maxGY = gY;
 
-    // 6. ボールの位置の計算とUI更新
+    // 6. 生のボール位置の計算
     const normalizedX = accelX_car / MAX_G; // 車の左右加速度 (-1.0 to 1.0)
     const normalizedY = accelY_car / MAX_G; // 車の前後加速度 (-1.0 to 1.0)
     
-    // 最終的なボールの移動方向設定: (両向きで共通)
-    
-    // X軸 (左右): 右方向への加速(+normalizedX)のとき、ボールを右(+)に動かす。
-    const offsetX = normalizedX * MAX_DISPLACEMENT; 
-    
-    // Y軸 (前後): 加速時(+normalizedY)のとき、ボールを上(-)に動かす。
-    const offsetY = -normalizedY * MAX_DISPLACEMENT; 
+    // 生のボール移動量 (px)
+    const rawOffsetX = normalizedX * MAX_DISPLACEMENT; 
+    const rawOffsetY = -normalizedY * MAX_DISPLACEMENT; 
 
-    // ボールがメーターからはみ出さないようにクリップ
-    const clipX = Math.max(-MAX_DISPLACEMENT, Math.min(MAX_DISPLACEMENT, offsetX));
-    const clipY = Math.max(-MAX_DISPLACEMENT, Math.min(MAX_DISPLACEMENT, offsetY));
+    // 7. 【追加】指数移動平均 (EMA) フィルタの適用
+    
+    // X軸の平滑化
+    filteredPosition.x = (FILTER_ALPHA * rawOffsetX) + ((1 - FILTER_ALPHA) * filteredPosition.x);
+    // Y軸の平滑化
+    filteredPosition.y = (FILTER_ALPHA * rawOffsetY) + ((1 - FILTER_ALPHA) * filteredPosition.y);
 
+
+    // 8. ボールがメーターからはみ出さないようにクリップ
+    const clipX = Math.max(-MAX_DISPLACEMENT, Math.min(MAX_DISPLACEMENT, filteredPosition.x));
+    const clipY = Math.max(-MAX_DISPLACEMENT, Math.min(MAX_DISPLACEMENT, filteredPosition.y));
+
+    // 9. UI更新
     ball.style.transform = `translate(calc(-50% + ${clipX}px), calc(-50% + ${clipY}px))`;
     updateDisplay();
 }
