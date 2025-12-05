@@ -12,6 +12,9 @@
     <div id="main-content">
         <div id="meter-area">
             <div id="meter-container">
+                <div class="g-label g-label-03">0.3G</div>
+                <div class="g-label g-label-06">0.6G</div>
+                
                 <div id="ball-trace-container"></div> 
                 
                 <div id="ball"></div>
@@ -29,8 +32,12 @@
             
             <div id="status">
                 <p>状態: <span id="status-text">待機中</span></p>
-                <p>Max G (X:左右): <span id="max-gx">0.00</span></p>
-                <p>Max G (Y:前後): <span id="max-gy">0.00</span></p>
+                <div id="max-g-display">
+                    <p>Max G (左): <span id="max-g-left">0.00</span></p>
+                    <p>Max G (右): <span id="max-g-right">0.00</span></p>
+                    <p>Max G (前): <span id="max-g-front">0.00</span></p>
+                    <p>Max G (後): <span id="max-g-rear">0.00</span></p>
+                </div>
             </div>
         </div>
     </div>
