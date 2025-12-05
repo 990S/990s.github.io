@@ -4,11 +4,9 @@ body {
     align-items: center;
     font-family: sans-serif;
     padding: 10px; 
-    /* 【修正】背景を黒に */
     background-color: #000000;
     min-height: 100vh;
     margin: 0;
-    /* 【修正】文字色を白に */
     color: white; 
 }
 
@@ -46,7 +44,6 @@ h1 {
     position: relative;
     width: 250px; 
     height: 250px;
-    /* 【修正】メーターの枠線を青に、背景を黒に */
     border: 4px solid #007aff; 
     background-color: #000000;
     border-radius: 50%;
@@ -56,7 +53,7 @@ h1 {
 }
 
 /* ---------------------------------------------------- */
-/* Gフォース目盛 (0.7Gスケールに調整) */
+/* Gフォース目盛 (0.7Gスケールに調整済み) */
 /* ---------------------------------------------------- */
 /* 0.6Gの目盛 (直径 214.3px) - 青色 */
 #meter-container::before {
@@ -64,9 +61,8 @@ h1 {
     position: absolute;
     width: 214px; 
     height: 214px;
-    /* 【修正】青色を維持 */
     border: 1px dashed rgba(0, 122, 255, 0.5);
-    border-radius: 50%;
+    border-radius: 50%; 
     pointer-events: none;
     box-sizing: border-box;
     z-index: 1; 
@@ -78,14 +74,35 @@ h1 {
     position: absolute;
     width: 107px; 
     height: 107px;
-    /* 【修正】青色を維持 */
     border: 1px dashed rgba(0, 122, 255, 0.5);
-    border-radius: 50%;
+    border-radius: 50%; 
     pointer-events: none;
     box-sizing: border-box;
     z-index: 1; 
 }
 /* ---------------------------------------------------- */
+
+/* 目盛り凡例の基本スタイル */
+.g-label {
+    position: absolute;
+    color: #007aff;
+    font-size: 12px;
+    font-weight: bold;
+    z-index: 5;
+    transform: translate(-50%, -50%); 
+    pointer-events: none;
+}
+/* 0.3Gの凡例の位置 (半径 53.5pxの右側) */
+.g-label-03 {
+    top: 50%;
+    left: calc(50% + 55px); 
+}
+/* 0.6Gの凡例の位置 (半径 107.1pxの右側) */
+.g-label-06 {
+    top: 50%;
+    left: calc(50% + 109px); 
+}
+
 
 /* 残像を格納するコンテナ */
 #ball-trace-container {
@@ -102,17 +119,16 @@ h1 {
     position: absolute;
     width: 15px; 
     height: 15px;
-    /* 【修正】残像を赤に */
     background-color: rgba(255, 0, 0, 1.0); 
     border-radius: 50%;
     transform: translate(-50%, -50%); 
-    transition: opacity 1.0s linear; 
+    /* 【変更】残像のフェードアウト時間を3秒に */
+    transition: opacity 3.0s linear; 
 }
 
 /* 十字線 */
 #crosshair-h, #crosshair-v {
     position: absolute;
-    /* 【修正】青色を維持 */
     background-color: rgba(0, 122, 255, 0.4);
     z-index: 4; 
 }
@@ -123,7 +139,6 @@ h1 {
 #ball {
     width: 35px; 
     height: 35px;
-    /* 【修正】ボールを白に */
     background-color: white;
     border-radius: 50%;
     position: absolute;
@@ -141,11 +156,11 @@ h1 {
     display: flex;
     flex-direction: column;
     align-items: center;
-    /* 【修正】コントロールパネルの背景を濃い色に */
     border: 1px solid #444;
     border-radius: 8px;
     background-color: #1a1a1a;
     box-sizing: border-box;
+    min-height: 250px; 
 }
 #control-panel h2 {
     margin-top: 0;
@@ -167,7 +182,6 @@ button {
     cursor: pointer;
     border: none;
     border-radius: 5px;
-    /* 【修正】ボタンの文字色を白に */
     color: white;
 }
 
@@ -176,15 +190,13 @@ button {
 }
 
 #reset-max {
-    /* 【修正】リセットボタンを暗い色に */
     background-color: #444;
 }
 
-/* --- ステータス表示 (Max G) --- */
+/* --- ステータス表示 (Max G 4分割) --- */
 #status {
-    text-align: center;
+    text-align: left; 
     padding: 5px 10px;
-    /* 【修正】ステータス表示の背景を濃い色に */
     background-color: #1a1a1a;
     border: 1px solid #444;
     border-radius: 5px;
@@ -198,6 +210,10 @@ button {
 #status span {
     font-weight: bold;
     color: #007aff;
+    float: right; 
+}
+#max-g-display {
+    overflow: auto; 
 }
 
 /* 横向き（ランドスケープ）時の調整 */
