@@ -1,21 +1,24 @@
 // --- 定数と状態変数 ---
 const MAX_G = 9.80665; 
-const MAX_DISPLACEMENT = 125; // メーターの半径 (250px / 2)
+const MAX_DISPLACEMENT = 125; 
 const FILTER_ALPHA = 0.2; 
 const DECLINE_THRESHOLD = 0.3; 
 const SLIP_PEAK_MIN = 0.4; 
 const COOLDOWN_MS = 3000; 
 const HISTORY_SIZE = 12; 
-const TRACE_DURATION_MS = 1000; 
+// 【変更】残像が残る時間を3秒に
+const TRACE_DURATION_MS = 3000; 
 const TRACE_INTERVAL_MS = 50;   
 
-// メーターの最大表示範囲を0.7Gに設定
 const MAX_G_SCALE = 0.7; 
 
 let initialGravity = { x: 0, y: 0, z: 0 }; 
 let isInitialized = false;
-let maxGX = 0;
-let maxGY = 0;
+let maxG_left = 0;
+let maxG_right = 0;
+let maxG_front = 0;
+let maxG_rear = 0;
+
 let lastWarningTime = 0;
 let accelerationHistory = [];
 let currentOrientation = 0; 
@@ -28,8 +31,11 @@ let lastTraceTime = 0;
 const ball = document.getElementById('ball');
 const traceContainer = document.getElementById('ball-trace-container'); 
 const statusText = document.getElementById('status-text');
-const maxGxDisplay = document.getElementById('max-gx');
-const maxGyDisplay = document.getElementById('max-gy');
+const maxGLeftDisplay = document.getElementById('max-g-left');
+const maxGRightDisplay = document.getElementById('max-g-right');
+const maxGFrontDisplay = document.getElementById('max-g-front');
+const maxGRearDisplay = document.getElementById('max-g-rear');
+
 const initButton = document.getElementById('request-permission');
 const resetButton = document.getElementById('reset-max');
 
@@ -105,8 +111,10 @@ function initializeZeroPoint(event) {
     initialGravity.y = y;
     initialGravity.z = z; 
     isInitialized = true;
-    maxGX = 0;
-    maxGY = 0;
+    maxG_left = 0;
+    maxG_right = 0;
+    maxG_front = 0;
+    maxG_rear = 0;
     accelerationHistory = [];
     filteredPosition = { x: 0, y: 0 }; 
     traceHistory = []; 
@@ -144,22 +152,27 @@ function handleMotion(event) {
         return;
     }
     
-    // 3. G計算、4. 警告、5. 最大G更新
+    // 3. G計算、4. 警告
     const MAX_G_CONST = MAX_G; 
     const accelMagnitudeG = Math.sqrt(accelX_car * accelX_car + accelY_car * accelY_car) / MAX_G_CONST;
     updateHistory(accelMagnitudeG);
     checkAndTriggerSlipWarning(accelMagnitudeG);
-    const gX = Math.abs(accelX_car) / MAX_G_CONST;
-    const gY = Math.abs(accelY_car) / MAX_G_CONST;
-    if (gX > maxGX) maxGX = gX;
-    if (gY > maxGY) maxGY = gY;
+
+    // 5. 最大加速度の更新を4方向に分割
+    const gX = accelX_car / MAX_G_CONST; 
+    const gY = accelY_car / MAX_G_CONST; 
+    
+    if (gX > 0 && gX > maxG_left) maxG_left = gX;
+    if (gX < 0 && Math.abs(gX) > maxG_right) maxG_right = Math.abs(gX);
+    
+    if (gY > 0 && gY > maxG_front) maxG_front = gY;
+    if (gY < 0 && Math.abs(gY) > maxG_rear) maxG_rear = Math.abs(gY);
 
 
     // 6. 生のボール位置の計算
     const normalizedX = accelX_car / MAX_G_CONST; 
     const normalizedY = accelY_car / MAX_G_CONST; 
     
-    // スケールアップを適用: 0.7Gでメーター端に到達するようにする
     const rawOffsetX = (normalizedX / MAX_G_SCALE) * MAX_DISPLACEMENT; 
     const rawOffsetY = -(normalizedY / MAX_G_SCALE) * MAX_DISPLACEMENT; 
 
@@ -180,11 +193,11 @@ function handleMotion(event) {
         clipY *= scaleFactor;
     }
 
-    // 9. UI更新 (ボールの位置を更新)
+    // 9. UI更新
     ball.style.transform = `translate(calc(-50% + ${clipX}px), calc(-50% + ${clipY}px))`;
     updateDisplay();
     
-    // 10. 残像の記録と描画ロジックを分離
+    // 10. 残像の記録と描画ロジック
     updateTrace(clipX, clipY, currentTime);
 }
 
@@ -193,6 +206,7 @@ function handleMotion(event) {
 
 function updateTrace(x, y, currentTime) {
     // 1. 古い残像の削除とフェードアウト開始
+    // 【変更】TRACE_DURATION_MS (3秒) に合わせて削除タイミングも調整
     while (traceHistory.length > 0 && currentTime - traceHistory[0].time > TRACE_DURATION_MS + 100) {
         const oldDot = traceHistory.shift();
         if (oldDot.element) {
@@ -222,7 +236,7 @@ function updateTrace(x, y, currentTime) {
     }
 }
 
-// --- G抜け判定ロジック, UI更新ロジック ---
+// --- G抜け判定ロジック ---
 function updateHistory(currentMagnitude) {
     accelerationHistory.push(currentMagnitude);
     if (accelerationHistory.length > HISTORY_SIZE) {
@@ -240,13 +254,19 @@ function checkAndTriggerSlipWarning(currentMagnitude) {
         console.log(`🚨 G抜け警告！ ピーク: ${peakMagnitude.toFixed(2)} G -> 現在: ${currentMagnitude.toFixed(2)} G`);
     }
 }
+
+// --- UI更新ロジック ---
 function updateDisplay() {
-    maxGxDisplay.textContent = maxGX.toFixed(2);
-    maxGyDisplay.textContent = maxGY.toFixed(2);
+    maxGLeftDisplay.textContent = maxG_left.toFixed(2);
+    maxGRightDisplay.textContent = maxG_right.toFixed(2);
+    maxGFrontDisplay.textContent = maxG_front.toFixed(2);
+    maxGRearDisplay.textContent = maxG_rear.toFixed(2);
 }
 function resetMaxG() {
-    maxGX = 0;
-    maxGY = 0;
+    maxG_left = 0;
+    maxG_right = 0;
+    maxG_front = 0;
+    maxG_rear = 0;
     updateDisplay();
 }
 
