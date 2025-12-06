@@ -7,40 +7,42 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div id="container">
-        <h1>G-Force Web メーター</h1>
-
+    <div id="main-layout"> 
         <div id="gauge-area">
             <canvas id="g-meter-canvas"></canvas>
             <div id="g-display">0.00 G</div>
         </div>
 
-        <div id="controls">
-            <button id="request-permission">センサー許可/初期化</button>
-            <button id="reset-max-g">最大Gリセット</button>
+        <div id="right-panel">
+            <h1>G-Force Web メーター</h1>
+            
+            <div id="controls">
+                <button id="request-permission">センサー許可/初期化</button>
+                <button id="reset-max-g">最大Gリセット</button>
+            </div>
+
+            <div id="max-g-display">
+                <h2>最大G記録</h2>
+                <div class="max-g-row">
+                    <span class="max-g-label">Max G (左):</span> <span id="max-g-left" class="max-g-value">0.00</span> G
+                </div>
+                <div class="max-g-row">
+                    <span class="max-g-label">Max G (右):</span> <span id="max-g-right" class="max-g-value">0.00</span> G
+                </div>
+                <div class="max-g-row">
+                    <span class="max-g-label">Max G (前):</span> <span id="max-g-forward" class="max-g-value">0.00</span> G
+                </div>
+                <div class="max-g-row">
+                    <span class="max-g-label">Max G (後):</span> <span id="max-g-backward" class="max-g-value">0.00</span> G
+                </div>
+            </div>
+
+            <div id="log">ログ: 待機中...</div>
         </div>
-
-        <div id="max-g-display">
-            <h2>最大G記録</h2>
-            <div class="max-g-row">
-                <span class="max-g-label">Max G (左):</span> <span id="max-g-left" class="max-g-value">0.00</span> G
-            </div>
-            <div class="max-g-row">
-                <span class="max-g-label">Max G (右):</span> <span id="max-g-right" class="max-g-value">0.00</span> G
-            </div>
-            <div class="max-g-row">
-                <span class="max-g-label">Max G (前):</span> <span id="max-g-forward" class="max-g-value">0.00</span> G
-            </div>
-            <div class="max-g-row">
-                <span class="max-g-label">Max G (後):</span> <span id="max-g-backward" class="max-g-value">0.00</span> G
-            </div>
-        </div>
-
-        <div id="log">ログ: 待機中...</div>
-
-        <audio id="warning-sound" preload="auto">
-            </audio>
     </div>
+
+    <audio id="warning-sound" preload="auto">
+        </audio>
     <script src="script.js"></script>
 </body>
 </html>
