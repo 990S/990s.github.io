@@ -1,21 +1,19 @@
 // --- 定数と状態変数 ---
 const MAX_G = 9.80665; 
-const MAX_DISPLACEMENT = 125; // メーターの半径 (250px / 2)
-const FILTER_ALPHA = 0.2; // 【要件】EMAフィルタ係数
-const DECLINE_THRESHOLD = 0.3; // 【要件】G抜け判定 0.3G
-const SLIP_PEAK_MIN = 0.4; // 【要件】G抜け判定 ピークG 0.4G
+const MAX_DISPLACEMENT = 125; 
+const FILTER_ALPHA = 0.2; 
+const DECLINE_THRESHOLD = 0.3; 
+const SLIP_PEAK_MIN = 0.4; 
 const COOLDOWN_MS = 3000; 
 const HISTORY_SIZE = 12; 
-// 【要件】残像の表示時間を3.0秒に
-const TRACE_DURATION_MS = 3000; 
+const TRACE_DURATION_MS = 1000; 
 const TRACE_INTERVAL_MS = 50;   
 
-// 【要件】メーターの最大表示範囲を0.7Gに設定
 const MAX_G_SCALE = 0.7; 
 
 let initialGravity = { x: 0, y: 0, z: 0 }; 
 let isInitialized = false;
-// 【要件】Max G変数を4分割
+// 【修正】Max G変数を4分割
 let maxG_left = 0;
 let maxG_right = 0;
 let maxG_front = 0;
@@ -33,7 +31,7 @@ let lastTraceTime = 0;
 const ball = document.getElementById('ball');
 const traceContainer = document.getElementById('ball-trace-container'); 
 const statusText = document.getElementById('status-text');
-// 【要件】Max G表示DOM要素を4分割
+// 【修正】Max G表示DOM要素を4分割
 const maxGLeftDisplay = document.getElementById('max-g-left');
 const maxGRightDisplay = document.getElementById('max-g-right');
 const maxGFrontDisplay = document.getElementById('max-g-front');
@@ -42,10 +40,7 @@ const maxGRearDisplay = document.getElementById('max-g-rear');
 const initButton = document.getElementById('request-permission');
 const resetButton = document.getElementById('reset-max');
 
-// --- サウンドプール ---
-let audioContext;
-let oscillator;
-let gainNode;
+// ... (setupAudio, playWarningSound, requestSensorPermission, setupListeners, updateOrientation, initializeZeroPoint は省略) ...
 
 function setupAudio() {
     try {
@@ -69,8 +64,6 @@ function playWarningSound() {
     gainNode.gain.setValueAtTime(0.5, audioContext.currentTime);
     gainNode.gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + 0.3);
 }
-
-// --- センサーアクセスと初期化 ---
 function requestSensorPermission() {
     if (typeof DeviceOrientationEvent.requestPermission === 'function') {
         DeviceOrientationEvent.requestPermission()
@@ -114,7 +107,7 @@ function initializeZeroPoint(event) {
     initialGravity.y = y;
     initialGravity.z = z; 
     isInitialized = true;
-    // 【要件】Max G変数をリセット
+    // 【修正】Max G変数をリセット
     maxG_left = 0;
     maxG_right = 0;
     maxG_front = 0;
@@ -164,18 +157,16 @@ function handleMotion(event) {
     updateHistory(accelMagnitudeG);
     checkAndTriggerSlipWarning(accelMagnitudeG);
 
-    // 5. 【要件】最大加速度の更新を4方向に分割
+    // 5. 【修正】最大加速度の更新を4方向に分割
     const gX = accelX_car / MAX_G_CONST; // 左右 (-1.0 ~ 1.0)
     const gY = accelY_car / MAX_G_CONST; // 前後 (-1.0 ~ 1.0)
     
-    // Max G (左): X軸プラス側
+    // X軸: 左がプラス, 右がマイナス
     if (gX > 0 && gX > maxG_left) maxG_left = gX;
-    // Max G (右): X軸マイナス側 (絶対値)
     if (gX < 0 && Math.abs(gX) > maxG_right) maxG_right = Math.abs(gX);
     
-    // Max G (前): Y軸プラス側 (加速)
+    // Y軸: 前がプラス, 後がマイナス
     if (gY > 0 && gY > maxG_front) maxG_front = gY;
-    // Max G (後): Y軸マイナス側 (減速/ブレーキ) (絶対値)
     if (gY < 0 && Math.abs(gY) > maxG_rear) maxG_rear = Math.abs(gY);
 
 
@@ -183,16 +174,16 @@ function handleMotion(event) {
     const normalizedX = accelX_car / MAX_G_CONST; 
     const normalizedY = accelY_car / MAX_G_CONST; 
     
-    // 【要件】スケールアップを適用: 0.7Gでメーター端に到達するようにする
+    // スケールアップを適用: 0.7Gでメーター端に到達するようにする
     const rawOffsetX = (normalizedX / MAX_G_SCALE) * MAX_DISPLACEMENT; 
     const rawOffsetY = -(normalizedY / MAX_G_SCALE) * MAX_DISPLACEMENT; // Y軸は反転
 
-    // 7. 【要件】指数移動平均 (EMA) フィルタの適用
+    // 7. 指数移動平均 (EMA) フィルタの適用
     filteredPosition.x = (FILTER_ALPHA * rawOffsetX) + ((1 - FILTER_ALPHA) * filteredPosition.x);
     filteredPosition.y = (FILTER_ALPHA * rawOffsetY) + ((1 - FILTER_ALPHA) * filteredPosition.y);
 
 
-    // 8. 【要件】合成GがMAX_DISPLACEMENT (0.7G) を超えないように制限
+    // 8. 合成GがMAX_DISPLACEMENT (0.7G) を超えないように制限
     let clipX = filteredPosition.x;
     let clipY = filteredPosition.y;
     
@@ -217,7 +208,6 @@ function handleMotion(event) {
 
 function updateTrace(x, y, currentTime) {
     // 1. 古い残像の削除とフェードアウト開始
-    // 【要件】TRACE_DURATION_MS (3000ms) を使用
     while (traceHistory.length > 0 && currentTime - traceHistory[0].time > TRACE_DURATION_MS + 100) {
         const oldDot = traceHistory.shift();
         if (oldDot.element) {
@@ -268,14 +258,14 @@ function checkAndTriggerSlipWarning(currentMagnitude) {
 
 // --- UI更新ロジック ---
 function updateDisplay() {
-    // 【要件】4つの表示を更新
+    // 【修正】4つの表示を更新
     maxGLeftDisplay.textContent = maxG_left.toFixed(2);
     maxGRightDisplay.textContent = maxG_right.toFixed(2);
     maxGFrontDisplay.textContent = maxG_front.toFixed(2);
     maxGRearDisplay.textContent = maxG_rear.toFixed(2);
 }
 function resetMaxG() {
-    // 【要件】4つの変数をリセット
+    // 【修正】4つの変数をリセット
     maxG_left = 0;
     maxG_right = 0;
     maxG_front = 0;
