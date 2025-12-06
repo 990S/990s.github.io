@@ -1,4 +1,3 @@
-
 document.addEventListener('DOMContentLoaded', () => {
     // --- 定数とDOM要素の取得 ---
     const canvas = document.getElementById('g-meter-canvas');
@@ -18,15 +17,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const METER_MAX_G = 0.7; // メーターの最大表示範囲 (G)
     const BALL_RADIUS = 8; // ボールの半径 (px)
     const TRACE_TIME_S = 3.0; // 残像の表示時間 (秒)
-    const TRACE_POINTS_LIMIT = 300; // 残像の最大点数 (約3秒/10msで300点)
-    const EMA_ALPHA = 0.3; // 指数移動平均の平滑化係数 (0〜1、小さいほど滑らか)
+    const TRACE_POINTS_LIMIT = 300; // 残像の最大点数
+    const EMA_ALPHA = 0.3; // 指数移動平均の平滑化係数
 
     // --- 状態変数 ---
     let gravityOffset = { x: 0, y: 0 }; // 初期化時の重力オフセット
     let isInitialized = false;
-    let filteredG = { x: 0, y: 0 }; // フィルタ後のG
-    let totalG = 0; // 合成G
-    let tracePoints = []; // 残像の軌跡
+    let filteredG = { x: 0, y: 0 }; 
+    let totalG = 0; 
+    let tracePoints = []; 
 
     // 最大G記録
     let maxG = {
@@ -38,7 +37,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 警告音制御
     let peakG = 0;
-    let warningCooldown = false; // 連続警告防止用フラグ
+    let warningCooldown = false; 
 
     // --- メーター描画関数 ---
     function drawMeter() {
@@ -49,22 +48,11 @@ document.addEventListener('DOMContentLoaded', () => {
         // Canvasをクリア
         ctx.clearRect(0, 0, size, size);
 
-        // --- 1. 目盛りと十字線 (青: #007aff 系) ---
+        // --- 1. 目盛り (0.3G, 0.6G) の描画 ---
         ctx.strokeStyle = '#007aff';
         ctx.fillStyle = '#007aff';
         ctx.lineWidth = 1;
-        ctx.setLineDash([]); // 実線に戻す
-
-        // 十字線
-        ctx.beginPath();
-        ctx.moveTo(0, center);
-        ctx.lineTo(size, center);
-        ctx.moveTo(center, 0);
-        ctx.lineTo(center, size);
-        ctx.stroke();
-
-        // 目盛り円 (0.3G, 0.6G) - 点線
-        ctx.setLineDash([5, 5]);
+        ctx.setLineDash([5, 5]); // 点線
 
         const r03 = radius * (0.3 / METER_MAX_G);
         ctx.beginPath();
@@ -78,19 +66,31 @@ document.addEventListener('DOMContentLoaded', () => {
 
         ctx.setLineDash([]); // 実線に戻す
 
-        // --- 2. 凡例の数値表示 ---
-        ctx.font = '12px Arial';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
+        // --- 2. 十字線 (目盛りよりも上に描画することで目立たせる) ---
+        ctx.beginPath();
+        ctx.moveTo(0, center);
+        ctx.lineTo(size, center);
+        ctx.moveTo(center, 0);
+        ctx.lineTo(center, size);
+        ctx.stroke();
 
+
+        // --- 3. 凡例の数値表示 (0.3G, 0.6G) ---
+        ctx.font = '12px Arial';
+        ctx.textAlign = 'left'; // 右側に寄せて描画
+        ctx.textBaseline = 'middle';
+        
         // 0.3G
-        ctx.fillText('0.3G', center + r03 + 15, center);
+        ctx.fillText('0.3G', center + r03 + 5, center - 15);
         // 0.6G
-        ctx.fillText('0.6G', center + r06 + 15, center);
+        ctx.fillText('0.6G', center + r06 + 5, center - 15);
+        
         // 中央 (0G)
+        ctx.textAlign = 'center';
         ctx.fillText('0G', center, center + 20);
 
-        // --- 3. 残像（トレース）の描画 (赤: rgba(255, 0, 0, 1.0)) ---
+
+        // --- 4. 残像（トレース）の描画 ---
         const now = performance.now();
         const maxTraceLife = TRACE_TIME_S * 1000;
 
@@ -101,19 +101,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // 残像を描画
         tracePoints.forEach(point => {
-            const lifeRatio = (now - point.timestamp) / maxTraceLife; // 0 (最新) -> 1 (最古)
-            const alpha = 1.0 - lifeRatio; // 1.0 -> 0.0 でフェードアウト
+            const lifeRatio = (now - point.timestamp) / maxTraceLife; 
+            const alpha = 1.0 - lifeRatio; 
 
             ctx.fillStyle = `rgba(255, 0, 0, ${alpha})`;
             ctx.beginPath();
-            ctx.arc(point.x, point.y, 2, 0, 2 * Math.PI); // 小さな点
+            ctx.arc(point.x, point.y, 2, 0, 2 * Math.PI); 
             ctx.fill();
         });
 
-        // --- 4. ボール（現在のG）の描画 (白: white) ---
-        // Gをピクセル座標に変換
-        const pixelX = filteredG.x * (radius / METER_MAX_G); // 横方向 (X軸、デバイス右が+X)
-        const pixelY = -filteredG.y * (radius / METER_MAX_G); // 前後方向 (Y軸、デバイス前が+Y)
+        // --- 5. ボール（現在のG）の描画 ---
+        const pixelX = filteredG.x * (radius / METER_MAX_G); // 横方向 (+X: 左, -X: 右)
+        const pixelY = -filteredG.y * (radius / METER_MAX_G); // 前後方向 (+Y: 前, -Y: 後)
 
         // 合成Gが最大Gを超えないように制限
         const distance = Math.sqrt(pixelX * pixelX + pixelY * pixelY);
@@ -142,16 +141,17 @@ document.addEventListener('DOMContentLoaded', () => {
             tracePoints.shift();
         }
 
-        // --- 5. 合成G値の表示 ---
+        // --- 6. 合成G値の表示 ---
         gDisplay.textContent = `${totalG.toFixed(2)} G`;
     }
 
-    // Canvasサイズを調整 (CSSで設定したサイズに合わせる)
+    // Canvasサイズを調整
     function resizeCanvas() {
-        const size = canvas.offsetWidth;
+        // 親要素のサイズを使用
+        const size = document.getElementById('gauge-area').offsetWidth; 
         canvas.width = size;
         canvas.height = size;
-        drawMeter(); // リサイズ後に再描画
+        drawMeter(); 
     }
     resizeCanvas();
     window.addEventListener('resize', resizeCanvas);
@@ -161,17 +161,17 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!isInitialized) return;
 
         const acc = event.accelerationIncludingGravity;
-        if (!acc || acc.x === null) {
-            logElement.textContent = 'ログ: DeviceMotionEventのデータが不完全です。';
+        if (!acc || acc.x === null || acc.y === null || acc.z === null) {
+            logElement.textContent = 'ログ: センサーデータ取得エラー。';
             return;
         }
 
         // Gを算出 (加速度-オフセット)
-        // 進行方向 (車体Y軸, デバイスの縦) の加速度 = acc.y
-        // 横方向 (車体X軸, デバイスの横) の加速度 = acc.x
-        // 重力加速度 (m/s^2) で割って G に変換 (9.80665 m/s^2)
-        const gX = (acc.x - gravityOffset.x) / 9.80665; // 横G
-        const gY = (acc.y - gravityOffset.y) / 9.80665; // 前後G
+        // デバイス横向き（ランドスケープ）を想定:
+        //   - 車体X軸 (横G) は acc.x (デバイスの横方向)
+        //   - 車体Y軸 (前後G) は acc.y (デバイスの縦方向)
+        const gX = (acc.x - gravityOffset.x) / 9.80665; 
+        const gY = (acc.y - gravityOffset.y) / 9.80665; 
 
         // --- フィルタリング (EMA) ---
         filteredG.x = (gX * EMA_ALPHA) + (filteredG.x * (1 - EMA_ALPHA));
@@ -180,18 +180,16 @@ document.addEventListener('DOMContentLoaded', () => {
         // 合成Gの計算
         totalG = Math.sqrt(filteredG.x * filteredG.x + filteredG.y * filteredG.y);
 
-        // --- 最大G記録の更新 (4方向独立) ---
-        // X軸: 左方向 (+X) / 右方向 (-X)
-        if (filteredG.x > 0) { // 左方向
+        // --- 最大G記録の更新 ---
+        if (filteredG.x > 0) { // 左方向 (+X)
             maxG.left = Math.max(maxG.left, filteredG.x);
-        } else { // 右方向 (符号を反転して絶対値で記録)
+        } else { // 右方向 (-X)
             maxG.right = Math.max(maxG.right, Math.abs(filteredG.x));
         }
 
-        // Y軸: 前方向 (+Y, 加速) / 後方向 (-Y, 減速)
-        if (filteredG.y > 0) { // 前方向 (加速)
+        if (filteredG.y > 0) { // 前方向 (加速, +Y)
             maxG.forward = Math.max(maxG.forward, filteredG.y);
-        } else { // 後方向 (減速/ブレーキ, 符号を反転して絶対値で記録)
+        } else { // 後方向 (減速/ブレーキ, -Y)
             maxG.backward = Math.max(maxG.backward, Math.abs(filteredG.y));
         }
 
@@ -212,19 +210,15 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function checkWarning(currentG) {
-        // 閾値: ピークGが 0.4G以上
-        if (peakG >= 0.4) {
-            // スリップ条件: ピークGより 0.3G以上低下
-            if (currentG < peakG - 0.3) {
-                if (!warningCooldown) {
-                    playWarningSound();
-                    warningCooldown = true;
-                    // 警告音のクールダウン (例: 1秒間は再警告しない)
-                    setTimeout(() => { warningCooldown = false; }, 1000);
-                }
-                // ピークGをリセットして次のピークを待つ
-                peakG = 0;
+        // ピークGが 0.4G以上、かつ現在のGがピークGより 0.3G以上低下
+        if (peakG >= 0.4 && currentG < peakG - 0.3) {
+            if (!warningCooldown) {
+                playWarningSound();
+                warningCooldown = true;
+                setTimeout(() => { warningCooldown = false; }, 1000);
             }
+            // 警告発生後はピークGをリセットして、次の強いGを待つ
+            peakG = 0;
         }
 
         // ピークGを更新
@@ -232,11 +226,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function playWarningSound() {
-        // warningSound が有効なソースを持つ場合のみ再生
         if (warningSound.readyState >= 2) {
-            warningSound.currentTime = 0; // 最初から再生
+            warningSound.currentTime = 0; 
             warningSound.play().catch(e => {
-                // 自動再生ポリシーなどで失敗した場合の処理
                 logElement.textContent = 'ログ: 警告音の再生に失敗しました。' + e;
             });
         }
@@ -244,6 +236,25 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- イベントハンドラ ---
+    function startMotionTracking() {
+        // DeviceMotionイベントが取得できるまで待ち、ゼロ点を初期化する
+        const listener = (event) => {
+            const acc = event.accelerationIncludingGravity;
+            if (acc && acc.x !== null) {
+                // 初めて有効なデータが取得できたら初期化を実行
+                window.removeEventListener('devicemotion', listener);
+                initializeZeroPoint(event);
+            } else {
+                // データの準備ができていない場合は待機
+                logElement.textContent = 'ログ: センサーデータを待機中...';
+            }
+        };
+
+        window.addEventListener('devicemotion', listener);
+        logElement.textContent = 'ログ: センサーデータを取得し、ゼロ点を設定します...';
+    }
+
+
     requestPermissionButton.addEventListener('click', () => {
         // iOS 13+ で必要な DeviceMotion の許可リクエスト
         if (typeof DeviceMotionEvent.requestPermission === 'function') {
@@ -262,31 +273,21 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    function startMotionTracking() {
-        window.addEventListener('devicemotion', initializeZeroPoint, { once: true });
-        logElement.textContent = 'ログ: センサーデータを取得し、初期化しています...';
-    }
-
     function initializeZeroPoint(event) {
         const acc = event.accelerationIncludingGravity;
-        if (!acc || acc.x === null) {
-            logElement.textContent = 'ログ: DeviceMotionEventのデータが不完全なため、初期化できませんでした。';
-            return;
-        }
 
         // この時点の重力成分をオフセットとして記録
         gravityOffset.x = acc.x;
         gravityOffset.y = acc.y;
         isInitialized = true;
         
-        // フィルタ後のGも初期化 (0G)
         filteredG.x = 0;
         filteredG.y = 0;
 
-        window.removeEventListener('devicemotion', initializeZeroPoint);
+        // 以降、通常のモーション処理を開始
         window.addEventListener('devicemotion', handleDeviceMotion);
         
-        // 警告音再生のためのユーザーインタラクション確保 (ミュートで一度再生)
+        // 警告音再生のためのユーザーインタラクション確保
         warningSound.volume = 0;
         warningSound.play().catch(() => {});
         warningSound.volume = 1;
