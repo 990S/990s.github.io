@@ -1,1 +1,47 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>G-Force Web Meter</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <h1>Web G-Force メーター</h1>
+    
+    <div id="main-content">
+        <div id="meter-area">
+            <div id="meter-container">
+                <div class="g-label g-label-03">0.3G</div>
+                <div class="g-label g-label-06">0.6G</div>
+                
+                <div id="ball-trace-container"></div> 
+                
+                <div id="ball"></div>
+                <div id="crosshair-h"></div>
+                <div id="crosshair-v"></div>
+            </div>
+        </div>
 
+        <div id="control-panel">
+            <h2>操作・記録</h2>
+            <div id="controls">
+                <button id="request-permission">センサー許可/初期化</button>
+                <button id="reset-max">最大Gリセット</button>
+            </div>
+            
+            <div id="status">
+                <p>状態: <span id="status-text">待機中</span></p>
+                <div id="max-g-display">
+                    <p>Max G (左): <span id="max-g-left">0.00</span></p>
+                    <p>Max G (右): <span id="max-g-right">0.00</span></p>
+                    <p>Max G (前): <span id="max-g-front">0.00</span></p>
+                    <p>Max G (後): <span id="max-g-rear">0.00</span></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
