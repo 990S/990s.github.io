@@ -4,10 +4,9 @@ body {
     align-items: center;
     font-family: sans-serif;
     padding: 10px; 
-    background-color: #000000;
+    background-color: #f4f4f4;
     min-height: 100vh;
     margin: 0;
-    color: white; 
 }
 
 h1 {
@@ -45,93 +44,68 @@ h1 {
     width: 250px; 
     height: 250px;
     border: 4px solid #007aff; 
-    background-color: #000000;
     border-radius: 50%;
+    background-color: #ffffff;
     display: flex;
     justify-content: center;
     align-items: center;
 }
 
 /* ---------------------------------------------------- */
-/* Gフォース目盛 (0.7Gスケールに調整済み) */
+/* Gフォース目盛 (同心円) */
 /* ---------------------------------------------------- */
-/* 0.6Gの目盛 (直径 214.3px) - 青色 */
+/* 0.6Gの目盛 (直径 150px = 75px * 2) */
 #meter-container::before {
     content: '';
     position: absolute;
-    width: 214px; 
-    height: 214px;
+    width: 150px; 
+    height: 150px;
     border: 1px dashed rgba(0, 122, 255, 0.5);
-    border-radius: 50%; /* 【重要】円形を保持 */
+    border-radius: 50%;
     pointer-events: none;
     box-sizing: border-box;
     z-index: 1; 
 }
 
-/* 0.3Gの目盛 (直径 107.1px) - 青色 */
+/* 0.3Gの目盛 (直径 75px = 37.5px * 2) */
 #meter-container::after {
     content: '';
     position: absolute;
-    width: 107px; 
-    height: 107px;
+    width: 75px; 
+    height: 75px;
     border: 1px dashed rgba(0, 122, 255, 0.5);
-    border-radius: 50%; /* 【修正】円形を保持 */
+    border-radius: 50%;
     pointer-events: none;
     box-sizing: border-box;
     z-index: 1; 
 }
 /* ---------------------------------------------------- */
 
-/* 【追加】目盛り凡例の基本スタイル */
-.g-label {
-    position: absolute;
-    color: #007aff;
-    font-size: 12px;
-    font-weight: bold;
-    z-index: 5;
-    /* 中心からの相対位置で配置 */
-    transform: translate(-50%, -50%); 
-    pointer-events: none;
-}
-/* 0.3Gの凡例の位置 (半径 53.5pxの右側) */
-.g-label-03 {
-    top: 50%;
-    left: calc(50% + 55px); /* 半径 53.5px + 微調整 */
-}
-/* 0.6Gの凡例の位置 (半径 107.1pxの右側) */
-.g-label-06 {
-    top: 50%;
-    left: calc(50% + 109px); /* 半径 107.1px + 微調整 */
-}
-
-
-/* 残像を格納するコンテナ */
+/* 【追加】残像を格納するコンテナ */
 #ball-trace-container {
     position: absolute;
     width: 100%;
     height: 100%;
     top: 0;
     left: 0;
-    z-index: 3; 
+    z-index: 3; /* 目盛りより手前、十字線より奥に配置 */
 }
 
-/* 個々の残像のスタイル */
+/* 【追加】個々の残像のスタイル */
 .trace-dot {
     position: absolute;
     width: 15px; 
     height: 15px;
-    /* 【修正】残像を赤に */
     background-color: rgba(255, 0, 0, 1.0); 
     border-radius: 50%;
     transform: translate(-50%, -50%); 
-    transition: opacity 1.0s linear; 
 }
 
 /* 十字線 */
 #crosshair-h, #crosshair-v {
     position: absolute;
     background-color: rgba(0, 122, 255, 0.4);
-    z-index: 4; 
+    z-index: 4; /* 目盛り、残像より手前 */
 }
 #crosshair-h { width: 100%; height: 1px; }
 #crosshair-v { width: 1px; height: 100%; }
@@ -140,15 +114,14 @@ h1 {
 #ball {
     width: 35px; 
     height: 35px;
-    /* 【修正】ボールを白に */
-    background-color: white;
+    background-color: red;
     border-radius: 50%;
     position: absolute;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
     transition: transform 0.05s ease-out;
-    z-index: 10; 
+    z-index: 10; /* 最も手前に描画 */
 }
 
 /* --- コントロールパネル (右側) --- */
@@ -158,12 +131,10 @@ h1 {
     display: flex;
     flex-direction: column;
     align-items: center;
-    border: 1px solid #444;
+    border: 1px solid #ccc;
     border-radius: 8px;
-    background-color: #1a1a1a;
+    background-color: #e9e9e9;
     box-sizing: border-box;
-    /* 【修正】最大G表示の縦幅が伸びるため、幅を少し確保 */
-    min-height: 250px; 
 }
 #control-panel h2 {
     margin-top: 0;
@@ -185,23 +156,24 @@ button {
     cursor: pointer;
     border: none;
     border-radius: 5px;
-    color: white;
 }
 
 #request-permission {
     background-color: #007aff;
+    color: white;
 }
 
 #reset-max {
-    background-color: #444;
+    background-color: #aaa;
+    color: white;
 }
 
-/* --- ステータス表示 (Max G 4分割) --- */
+/* --- ステータス表示 (Max G) --- */
 #status {
-    text-align: left; /* 左寄せに変更 */
+    text-align: center;
     padding: 5px 10px;
-    background-color: #1a1a1a;
-    border: 1px solid #444;
+    background-color: #fff;
+    border: 1px solid #ccc;
     border-radius: 5px;
     font-size: 1.0em;
     width: 100%; 
@@ -213,12 +185,6 @@ button {
 #status span {
     font-weight: bold;
     color: #007aff;
-    /* 右端に揃える */
-    float: right; 
-}
-#max-g-display {
-    /* floatをクリア */
-    overflow: auto; 
 }
 
 /* 横向き（ランドスケープ）時の調整 */
@@ -227,7 +193,7 @@ button {
         padding: 5px; 
     }
     #main-content {
-        height: auto; 
+        height: 100%; 
         align-items: center;
     }
     #meter-area {
