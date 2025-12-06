@@ -1,0 +1,131 @@
+:root {
+    --color-bg: #000000;
+    --color-meter-bg: #000000;
+    --color-ball: white;
+    --color-trace: rgba(255, 0, 0, 1.0);
+    --color-grid: #007aff; /* 青 */
+    --color-text: #007aff; /* 青 */
+    --meter-size: 300px; /* メーターの直径 */
+    --scale-max-g: 0.7; /* メーターの最大表示G */
+}
+
+body {
+    background-color: var(--color-bg);
+    color: var(--color-text);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    margin: 0;
+    overflow: hidden; /* スマートフォンでの横向き時のスクロール防止 */
+}
+
+#container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+    width: 100%;
+    max-width: 500px;
+    text-align: center;
+}
+
+h1 {
+    color: white;
+    font-size: 1.5em;
+    margin-bottom: 20px;
+}
+
+/* --- メーターエリア --- */
+#gauge-area {
+    position: relative;
+    width: var(--meter-size);
+    height: var(--meter-size);
+    margin-bottom: 30px;
+    border: 2px solid var(--color-grid);
+    border-radius: 50%;
+    background-color: var(--color-meter-bg);
+    box-shadow: 0 0 15px rgba(0, 122, 255, 0.5); /* 青いシャドウ */
+}
+
+#g-meter-canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+#g-display {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 2.5em;
+    font-weight: bold;
+    color: white;
+    text-shadow: 0 0 5px var(--color-grid);
+}
+
+/* --- コントロールとログ --- */
+#controls {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+button {
+    background-color: var(--color-grid);
+    color: var(--color-bg);
+    border: none;
+    padding: 10px 20px;
+    font-size: 1em;
+    font-weight: bold;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+button:hover {
+    background-color: #3b9bff;
+}
+
+#log {
+    margin-top: 10px;
+    font-size: 0.8em;
+    color: gray;
+}
+
+/* --- 最大G表示エリア --- */
+#max-g-display {
+    width: 100%;
+    max-width: 300px;
+    text-align: left;
+    padding: 15px;
+    border: 1px solid var(--color-grid);
+    border-radius: 8px;
+    background-color: #1a1a1a;
+}
+
+#max-g-display h2 {
+    color: white;
+    font-size: 1.2em;
+    margin-top: 0;
+    margin-bottom: 10px;
+    border-bottom: 1px solid var(--color-grid);
+    padding-bottom: 5px;
+}
+
+.max-g-row {
+    margin-bottom: 5px;
+    display: flex;
+    justify-content: space-between;
+}
+
+.max-g-label {
+    color: var(--color-text);
+}
+
+.max-g-value {
+    font-weight: bold;
+    color: white; /* 値は白くして強調 */
+}
