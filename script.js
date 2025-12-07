@@ -164,7 +164,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // 1. 左右方向 (左右の動き): X軸を使用し、符号はそのまま（左旋回で左に動くと仮定）
         //    * 前回のY軸は無視し、X軸を左右の動きに割り当てます。
-        const g_side = -gX_device; 
+        const g_side = -gY_device; 
 
         // 2. 前後方向 (上下の動き): Z軸を使用し、符号を反転 (加速で上に動くことを維持)
         const g_forward = -gZ_device; 
