@@ -1,13 +1,16 @@
 // --- 定数と状態変数 ---
 const MAX_G = 9.80665; 
 const MAX_DISPLACEMENT = 125; // メーターの半径 (250px / 2)
-const FILTER_ALPHA = 0.2; // EMA平滑化係数
+const FILTER_ALPHA = 0.2; 
 const DECLINE_THRESHOLD = 0.3; 
 const SLIP_PEAK_MIN = 0.4; 
 const COOLDOWN_MS = 3000; 
 const HISTORY_SIZE = 12; 
-const TRACE_DURATION_MS = 1000; // 残像が残る時間 (1秒)
-const TRACE_INTERVAL_MS = 50;   // 残像を記録する間隔 (50msごと)
+const TRACE_DURATION_MS = 1000; 
+const TRACE_INTERVAL_MS = 50;   
+
+// メーターの最大表示範囲を0.7Gに設定
+const MAX_G_SCALE = 0.7; 
 
 let initialGravity = { x: 0, y: 0, z: 0 }; 
 let isInitialized = false;
@@ -18,7 +21,6 @@ let accelerationHistory = [];
 let currentOrientation = 0; 
 let filteredPosition = { x: 0, y: 0 }; 
 
-// 【修正】残像データ (位置とタイムスタンプとDOM要素自体を記録)
 let traceHistory = []; 
 let lastTraceTime = 0;
 
@@ -53,16 +55,13 @@ function setupAudio() {
         statusText.textContent = '警告音機能が無効です。';
     }
 }
-
 function playWarningSound() {
     if (!gainNode || !audioContext) return;
     gainNode.gain.setValueAtTime(0.5, audioContext.currentTime);
     gainNode.gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + 0.3);
 }
 
-
 // --- センサーアクセスと初期化 ---
-
 function requestSensorPermission() {
     if (typeof DeviceOrientationEvent.requestPermission === 'function') {
         DeviceOrientationEvent.requestPermission()
@@ -81,7 +80,6 @@ function requestSensorPermission() {
         setupListeners();
     }
 }
-
 function setupListeners() {
     setupAudio();
     window.addEventListener('devicemotion', handleMotion);
@@ -89,7 +87,6 @@ function setupListeners() {
     currentOrientation = window.orientation || 0;
     statusText.textContent = 'センサーアクセス許可済';
 }
-
 function updateOrientation() {
     currentOrientation = window.orientation || 0;
     if (isInitialized) {
@@ -97,51 +94,43 @@ function updateOrientation() {
         isInitialized = false;
     }
 }
-
 function initializeZeroPoint(event) {
     if (!event || !event.accelerationIncludingGravity) {
         statusText.textContent = '加速度データ取得不可';
         return;
     }
-    
     currentOrientation = window.orientation || 0;
-
     const { x, y, z } = event.accelerationIncludingGravity;
     initialGravity.x = x;
     initialGravity.y = y;
     initialGravity.z = z; 
-
     isInitialized = true;
     maxGX = 0;
     maxGY = 0;
     accelerationHistory = [];
     filteredPosition = { x: 0, y: 0 }; 
     traceHistory = []; 
-    traceContainer.innerHTML = ''; // 残像DOMもクリア
-
+    traceContainer.innerHTML = ''; 
     statusText.textContent = '初期化完了 (G計測中)';
     updateDisplay();
 }
 
 // --- メインデータ処理 ---
-
 function handleMotion(event) {
     const { accelerationIncludingGravity } = event;
     const currentTime = Date.now(); 
 
     if (!accelerationIncludingGravity) return;
-
     if (!isInitialized) {
         initializeZeroPoint(event);
         return;
     }
 
-    // 1. 重力成分の除去 (純粋なユーザー加速度を抽出)
+    // 1. 重力成分の除去
     let userAccelY = accelerationIncludingGravity.y - initialGravity.y;
     let userAccelZ = accelerationIncludingGravity.z - initialGravity.z;
     
     // 2. 軸マッピング
-    
     let accelX_car; 
     let accelY_car; 
     
@@ -155,7 +144,7 @@ function handleMotion(event) {
         return;
     }
     
-    // 3. G計算、4. 警告、5. 最大G更新 (省略)
+    // 3. G計算、4. 警告、5. 最大G更新
     const MAX_G_CONST = MAX_G; 
     const accelMagnitudeG = Math.sqrt(accelX_car * accelX_car + accelY_car * accelY_car) / MAX_G_CONST;
     updateHistory(accelMagnitudeG);
@@ -170,33 +159,41 @@ function handleMotion(event) {
     const normalizedX = accelX_car / MAX_G_CONST; 
     const normalizedY = accelY_car / MAX_G_CONST; 
     
-    const rawOffsetX = normalizedX * MAX_DISPLACEMENT; 
-    const rawOffsetY = -normalizedY * MAX_DISPLACEMENT; 
+    // スケールアップを適用: 0.7Gでメーター端に到達するようにする
+    const rawOffsetX = (normalizedX / MAX_G_SCALE) * MAX_DISPLACEMENT; 
+    const rawOffsetY = -(normalizedY / MAX_G_SCALE) * MAX_DISPLACEMENT; 
 
     // 7. 指数移動平均 (EMA) フィルタの適用
     filteredPosition.x = (FILTER_ALPHA * rawOffsetX) + ((1 - FILTER_ALPHA) * filteredPosition.x);
     filteredPosition.y = (FILTER_ALPHA * rawOffsetY) + ((1 - FILTER_ALPHA) * filteredPosition.y);
 
 
-    // 8. ボールがメーターからはみ出さないようにクリップ
-    const clipX = Math.max(-MAX_DISPLACEMENT, Math.min(MAX_DISPLACEMENT, filteredPosition.x));
-    const clipY = Math.max(-MAX_DISPLACEMENT, Math.min(MAX_DISPLACEMENT, filteredPosition.y));
+    // 8. 合成GがMAX_DISPLACEMENT (0.7G) を超えないように制限
+    let clipX = filteredPosition.x;
+    let clipY = filteredPosition.y;
     
+    const currentDistance = Math.sqrt(clipX * clipX + clipY * clipY);
+
+    if (currentDistance > MAX_DISPLACEMENT) {
+        const scaleFactor = MAX_DISPLACEMENT / currentDistance;
+        clipX *= scaleFactor;
+        clipY *= scaleFactor;
+    }
+
     // 9. UI更新 (ボールの位置を更新)
     ball.style.transform = `translate(calc(-50% + ${clipX}px), calc(-50% + ${clipY}px))`;
     updateDisplay();
     
-    // 10. 【修正】残像の記録と描画ロジックを分離
+    // 10. 残像の記録と描画ロジックを分離
     updateTrace(clipX, clipY, currentTime);
 }
 
 
-// --- 【追加・修正】残像の管理ロジック ---
+// --- 残像の管理ロジック ---
 
 function updateTrace(x, y, currentTime) {
     // 1. 古い残像の削除とフェードアウト開始
     while (traceHistory.length > 0 && currentTime - traceHistory[0].time > TRACE_DURATION_MS + 100) {
-        // TRACE_DURATION_MS + 100ms 後にDOMから完全に削除
         const oldDot = traceHistory.shift();
         if (oldDot.element) {
             oldDot.element.remove();
@@ -207,8 +204,6 @@ function updateTrace(x, y, currentTime) {
     if (currentTime - lastTraceTime > TRACE_INTERVAL_MS) {
         const traceDot = document.createElement('div');
         traceDot.className = 'trace-dot';
-
-        // メーターコンテナの中心 (125px) を基準に位置を設定
         traceDot.style.transform = `translate(calc(125px + ${x}px), calc(125px + ${y}px))`;
         
         traceContainer.appendChild(traceDot);
@@ -216,14 +211,10 @@ function updateTrace(x, y, currentTime) {
         traceHistory.push({ x, y, time: currentTime, element: traceDot });
         lastTraceTime = currentTime;
         
-        // 3. 【重要】フェードアウトを開始させる
-        // DOMに要素が追加された後、次のイベントループで透明度を0にすることでトランジションが発火する
-        // requestAnimationFrameを使うことで確実に次の描画サイクルを待つ
+        // 3. フェードアウトを開始させる
         requestAnimationFrame(() => {
-             // 記録済みの古い残像の透明度を下げ、フェードアウトさせる
             traceHistory.forEach(dot => {
                 if (currentTime - dot.time > 0) {
-                     // 現在時刻より前に生成された残像をフェードアウトさせる
                     dot.element.style.opacity = '0';
                 }
             });
@@ -231,34 +222,28 @@ function updateTrace(x, y, currentTime) {
     }
 }
 
-// ... (G抜け判定ロジック、UI更新ロジックは省略) ...
-
+// --- G抜け判定ロジック, UI更新ロジック ---
 function updateHistory(currentMagnitude) {
     accelerationHistory.push(currentMagnitude);
     if (accelerationHistory.length > HISTORY_SIZE) {
         accelerationHistory.shift();
     }
 }
-
 function checkAndTriggerSlipWarning(currentMagnitude) {
     if (accelerationHistory.length !== HISTORY_SIZE) return;
-
     const peakMagnitude = Math.max(...accelerationHistory);
     const decline = peakMagnitude - currentMagnitude;
     const currentTime = Date.now();
-
     if (decline >= DECLINE_THRESHOLD && peakMagnitude >= SLIP_PEAK_MIN && (currentTime - lastWarningTime) > COOLDOWN_MS) {
         playWarningSound();
         lastWarningTime = currentTime;
         console.log(`🚨 G抜け警告！ ピーク: ${peakMagnitude.toFixed(2)} G -> 現在: ${currentMagnitude.toFixed(2)} G`);
     }
 }
-
 function updateDisplay() {
     maxGxDisplay.textContent = maxGX.toFixed(2);
     maxGyDisplay.textContent = maxGY.toFixed(2);
 }
-
 function resetMaxG() {
     maxGX = 0;
     maxGY = 0;
