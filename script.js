@@ -23,7 +23,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const METER_MAX_G = 0.7; 
     const BALL_RADIUS = 8; 
-    const TRACE_TIME_S = 0.0; 
+    const TRACE_TIME_S = 3.0; 
     const EMA_ALPHA = 0.08; 
 
     // --- 状態変数 ---
