@@ -98,9 +98,9 @@ document.addEventListener('DOMContentLoaded', () => {
             ctx.fill();
         });
 
-        // --- 5. ボール（現在のG）の描画 ---
+        // --- 5. ボール（現在のG）の描画 (軸修正済み) ---
         
-        // filteredG.x (左右G) -> 画面上 X軸
+        // filteredG.x (左右G) -> 画面上 X軸 (左右)
         const pixelX = filteredG.x * (radius / METER_MAX_G); 
         
         // filteredG.y (前後G) -> 画面上 Y軸 (Y軸は下がプラスなので反転: -filteredG.y)
@@ -176,12 +176,108 @@ document.addEventListener('DOMContentLoaded', () => {
         const gY_device = (acc.y - gravityOffset.y) / 9.80665; // デバイスY軸 (前後方向のG)
         
         // --- フィルタリング (EMA) ---
-        // 左右G: デバイスX軸をそのまま使用
+        // filteredG.x (左右G) ← デバイスX軸
         filteredG.x = (gX_device * EMA_ALPHA) + (filteredG.x * (1 - EMA_ALPHA)); 
-        // 前後G: デバイスY軸をそのまま使用
+        // filteredG.y (前後G) ← デバイスY軸
         filteredG.y = (gY_device * EMA_ALPHA) + (filteredG.y * (1 - EMA_ALPHA)); 
 
         totalG = Math.sqrt(filteredG.x * filteredG.x + filteredG.y * filteredG.y);
 
         // 最大G記録の更新
-        // X軸 (左右方向): +Xが左、-X
+        // X軸 (左右方向): +Xが左、-Xが右
+        if (filteredG.x > 0) { // 左方向
+            maxG.left = Math.max(maxG.left, filteredG.x);
+        } else { // 右方向 
+            maxG.right = Math.max(maxG.right, Math.abs(filteredG.x));
+        }
+
+        // Y軸 (前後方向): +Yが前(加速)、-Yが後(減速)
+        if (filteredG.y > 0) { // 前方向 (加速)
+            maxG.forward = Math.max(maxG.forward, filteredG.y);
+        } else { // 後方向 (減速/ブレーキ)
+            maxG.backward = Math.max(maxG.backward, Math.abs(filteredG.y));
+        }
+
+        updateMaxGDisplay();
+        checkWarning(totalG);
+        drawMeter();
+    }
+    
+    // --- センサー初期化ロジック ---
+    const initializeZeroPointAndStart = (event) => {
+        window.removeEventListener('devicemotion', initializeZeroPointAndStart);
+
+        const acc = event.accelerationIncludingGravity;
+
+        if (!acc || acc.x === null) {
+             logElement.textContent = 'ログ: センサーデータが不完全なため、初期化できませんでした。';
+             return;
+        }
+        
+        // 初期化時の重力オフセットを設定
+        gravityOffset.x = acc.x;
+        gravityOffset.y = acc.y;
+        isInitialized = true;
+        
+        filteredG.x = 0;
+        filteredG.y = 0;
+
+        window.addEventListener('devicemotion', handleDeviceMotion);
+        
+        // 警告音の準備 (iOS対応)
+        warningSound.volume = 0;
+        warningSound.play().catch(() => {});
+        warningSound.volume = 1;
+
+        logElement.textContent = `ログ: センサー初期化完了。X: ${gravityOffset.x.toFixed(2)} m/s², Y: ${gravityOffset.y.toFixed(2)} m/s² をゼロ点に設定しました。`;
+    };
+
+    function startMotionTracking() {
+        window.removeEventListener('devicemotion', handleDeviceMotion);
+        window.removeEventListener('devicemotion', initializeZeroPointAndStart);
+
+        logElement.textContent = 'ログ: センサーデータを取得し、ゼロ点を設定します...';
+        
+        window.addEventListener('devicemotion', initializeZeroPointAndStart);
+    }
+
+    // --- イベントハンドラ ---
+    requestPermissionButton.addEventListener('click', () => {
+        console.log("ボタンクリックイベント発生！"); 
+
+        if (isInitialized) {
+            logElement.textContent = 'ログ: 既にセンサーは初期化済みです。';
+            return;
+        }
+
+        // --- デバイスモーションセンサーのアクセス許可要求 ---
+        if (typeof DeviceMotionEvent.requestPermission === 'function') {
+            logElement.textContent = 'ログ: センサー許可ポップアップを表示します...';
+            
+            DeviceMotionEvent.requestPermission().then(permissionState => {
+                if (permissionState === 'granted') {
+                    startMotionTracking();
+                } else {
+                    logElement.textContent = 'ログ: センサーの使用が拒否されました。設定を確認してください。';
+                }
+            }).catch(error => {
+                // HTTPS/localhost 外でのアクセスエラー対策
+                if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
+                    logElement.innerHTML = 'ログ: ⛔ **エラー: ポップアップが出ません。** HTTPSまたはlocalhostでアクセスしてください。';
+                } else {
+                    logElement.textContent = 'ログ: センサー許可リクエスト中にエラーが発生しました: ' + error.message;
+                }
+            });
+        } else {
+            // 許可が不要な環境 (Android, PCなど)
+            logElement.textContent = 'ログ: 許可不要な環境として、トラッキングを開始します。';
+            startMotionTracking();
+        }
+    });
+    
+    resetMaxGButton.addEventListener('click', () => {
+        maxG = { left: 0, right: 0, forward: 0, backward: 0 };
+        updateMaxGDisplay();
+        logElement.textContent = 'ログ: 最大G記録をリセットしました。';
+    });
+});
