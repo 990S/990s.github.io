@@ -23,8 +23,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const METER_MAX_G = 0.7; 
     const BALL_RADIUS = 8; 
-    const TRACE_TIME_S = 3.0; 
-    const EMA_ALPHA = 0.01; 
+    const TRACE_TIME_S = 10.0; 
+    const EMA_ALPHA = 0.08; 
 
     // --- 状態変数 ---
     let gravityOffset = { x: 0, y: 0, z: 0 }; 
