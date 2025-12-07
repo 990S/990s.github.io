@@ -13,36 +13,32 @@ body {
     background-color: var(--color-bg);
     color: var(--color-text);
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    /* 横向き利用を想定し、画面全体を使用 */
     min-height: 100vh;
     margin: 0;
     overflow: hidden; 
 }
 
-/* メインレイアウト: 横向きでメーターを左、コントロールを右に配置 */
 #main-layout {
     display: flex;
     justify-content: center;
     align-items: center;
     width: 100vw;
     height: 100vh;
-    gap: 20px; /* メーターと右パネルの間隔 */
+    gap: 20px; 
     padding: 10px;
     box-sizing: border-box;
 }
 
 h1 {
     color: white;
-    font-size: 1.2em; /* 小さくしてスペースを確保 */
+    font-size: 1.2em; 
     margin-bottom: 15px;
 }
 
-/* --- メーターエリア --- */
 #gauge-area {
     position: relative;
     width: var(--meter-size);
     height: var(--meter-size);
-    /* 画面が小さい場合は縮小 */
     flex-shrink: 1;
     border: 2px solid var(--color-grid);
     border-radius: 50%;
@@ -56,33 +52,31 @@ h1 {
     display: block;
 }
 
+/* G値を円の中心から上部に移動 (前々回修正済み) */
 #g-display {
     position: absolute;
-    top: 0%;
+    top: 15%; 
     left: 50%;
-    transform: translate(-50%, -50%);
-    font-size: 2.0em; /* サイズを調整 */
+    transform: translate(-50%, -50%); 
+    font-size: 2.0em; 
     font-weight: bold;
     color: white;
     text-shadow: 0 0 5px var(--color-grid);
 }
 
-/* --- 右パネル (コントロールと最大G) --- */
 #right-panel {
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
     padding: 10px;
-    /* 縦方向のスペースに合わせて自動で幅を調整 */
     max-width: 250px; 
     flex-grow: 1;
 }
 
-/* --- コントロールとログ --- */
 #controls {
     display: flex;
-    flex-direction: column; /* ボタンを縦に並べる */
+    flex-direction: column; 
     gap: 10px;
     margin-bottom: 20px;
     width: 100%;
@@ -92,7 +86,7 @@ button {
     background-color: var(--color-grid);
     color: var(--color-bg);
     border: none;
-    padding: 8px 15px; /* サイズを調整 */
+    padding: 8px 15px; 
     font-size: 0.9em;
     font-weight: bold;
     border-radius: 5px;
@@ -115,11 +109,10 @@ button:hover {
     word-break: break-all;
 }
 
-/* --- 最大G表示エリア --- */
 #max-g-display {
     width: 100%;
     text-align: left;
-    padding: 10px; /* サイズを調整 */
+    padding: 10px; 
     border: 1px solid var(--color-grid);
     border-radius: 8px;
     background-color: #1a1a1a;
@@ -151,12 +144,11 @@ button:hover {
     color: white;
 }
 
-/* 画面が非常に小さい場合の調整 */
 @media (max-height: 400px) {
     :root {
         --meter-size: 200px; 
     }
     #g-display { font-size: 1.5em; }
     #max-g-display { font-size: 0.8em; }
-    h1 { display: none; } /* タイトルを非表示にしてスペースを確保 */
+    h1 { display: none; }
 }
