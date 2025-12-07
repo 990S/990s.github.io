@@ -162,7 +162,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // --- 最大G記録の更新 ---
         // X軸 (左右方向): +Xが左、-Xが右
-        if (filteredG.x > 0) { // 左方向
+        if (filteredG.x < 0) { // 左方向
             maxG.left = Math.max(maxG.left, filteredG.x);
         } else { // 右方向 
             maxG.right = Math.max(maxG.right, Math.abs(filteredG.x));
