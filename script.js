@@ -24,13 +24,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const METER_MAX_G = 0.7; 
     const BALL_RADIUS = 8; 
     const TRACE_TIME_S = 3.0; 
-    
-    // 🎯 変更箇所: 平滑化係数を0.3から0.08に下げて、振動を強く吸収します 🎯
-    const EMA_ALPHA = 0.08; 
+    const EMA_ALPHA = 0.3; 
 
     // --- 状態変数 ---
+    // 重力オフセットは3軸で記録
     let gravityOffset = { x: 0, y: 0, z: 0 }; 
     let isInitialized = false;
+    // filteredG.x: 左右G (メーター横軸), filteredG.y: 前後G (メーター縦軸)
     let filteredG = { x: 0, y: 0 }; 
     let totalG = 0; 
     let tracePoints = []; 
@@ -136,9 +136,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function checkWarning(currentG) {
+        // (省略)
         if (peakG >= 0.4 && currentG < peakG - 0.3) {
-            if (true) { 
+            if (true) { // warningCooldownのチェックは省略
                 // playWarningSound();
+                // warningCooldown = true;
+                // setTimeout(() => { warningCooldown = false; }, 1000);
             }
             peakG = 0;
         }
@@ -157,12 +160,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const gY_device = (acc.y - gravityOffset.y) / 9.80665;
         const gZ_device = (acc.z - gravityOffset.z) / 9.80665; 
         
-        // **【横向き・立てかけマッピング】**
+        // **【コア修正: 横向き・立てかけマッピング】**
         
-        // 1. 左右方向 (左右の動き): X軸を使用 (符号はそのまま)
+        // 1. 左右方向 (左右の動き): X軸を使用し、符号はそのまま（左旋回で左に動くと仮定）
+        //    * 前回のY軸は無視し、X軸を左右の動きに割り当てます。
         const g_side = gX_device; 
 
-        // 2. 前後方向 (上下の動き): Z軸を使用し、符号を反転 
+        // 2. 前後方向 (上下の動き): Z軸を使用し、符号を反転 (加速で上に動くことを維持)
         const g_forward = -gZ_device; 
 
         // --- フィルタリング (EMA) ---
@@ -174,15 +178,17 @@ document.addEventListener('DOMContentLoaded', () => {
         totalG = Math.sqrt(filteredG.x * filteredG.x + filteredG.y * filteredG.y);
 
         // --- 最大G記録の更新 ---
-        if (filteredG.x > 0) { 
+        // X軸 (左右方向): +Xが左、-Xが右 (符号が合わない場合は、g_sideの定義を `-gX_device` に変更)
+        if (filteredG.x > 0) { // 左方向
             maxG.left = Math.max(maxG.left, filteredG.x);
-        } else { 
+        } else { // 右方向 
             maxG.right = Math.max(maxG.right, Math.abs(filteredG.x));
         }
 
-        if (filteredG.y > 0) { 
+        // Y軸 (前後方向): +Yが前(加速)、-Yが後(減速)
+        if (filteredG.y > 0) { // 前方向 (加速)
             maxG.forward = Math.max(maxG.forward, filteredG.y);
-        } else { 
+        } else { // 後方向 (減速/ブレーキ)
             maxG.backward = Math.max(maxG.backward, Math.abs(filteredG.y));
         }
 
@@ -202,6 +208,7 @@ document.addEventListener('DOMContentLoaded', () => {
              return;
         }
         
+        // 重力オフセットを3軸すべてで記録
         gravityOffset.x = acc.x;
         gravityOffset.y = acc.y;
         gravityOffset.z = acc.z;
@@ -212,6 +219,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         window.addEventListener('devicemotion', handleDeviceMotion);
         
+        // 警告音の準備 (省略)
+        // warningSound.volume = 0;
+        // warningSound.play().catch(() => {});
+        // warningSound.volume = 1;
+
         logElement.textContent = `ログ: センサー初期化完了。X: ${gravityOffset.x.toFixed(2)}, Y: ${gravityOffset.y.toFixed(2)}, Z: ${gravityOffset.z.toFixed(2)} をゼロ点に設定しました。`;
     };
 
