@@ -1,244 +1,47 @@
-document.addEventListener('DOMContentLoaded', () => {
-    // --- 定数とDOM要素の取得 ---
-    const canvas = document.getElementById('g-meter-canvas');
-    const ctx = canvas.getContext('2d');
-    const gDisplay = document.getElementById('g-display');
-    const logElement = document.getElementById('log');
-    const requestPermissionButton = document.getElementById('request-permission');
-    const resetMaxGButton = document.getElementById('reset-max-g');
-    const warningSound = document.getElementById('warning-sound');
-
-    // **デバッグログの強化:** ボタンが取得できたかを確認
-    if (!requestPermissionButton) {
-        if (logElement) {
-             logElement.textContent = '致命的エラー: 「センサー許可/初期化」ボタンが見つかりません。HTML IDを確認してください。';
-        }
-        console.error('Fatal Error: Button element with ID "request-permission" not found.');
-        return; // 以降の処理を停止
-    }
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>G-Force Web Meter</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <h1>Web G-Force メーター</h1>
     
-    // 最大G表示DOM要素 (省略)
-    const maxGLeftElement = document.getElementById('max-g-left');
-    const maxGRightElement = document.getElementById('max-g-right');
-    const maxGForwardElement = document.getElementById('max-g-forward');
-    const maxGBackwardElement = document.getElementById('max-g-backward');
+    <div id="main-content">
+        <div id="meter-area">
+            <div id="meter-container">
+                <div class="g-label g-label-03">0.3G</div>
+                <div class="g-label g-label-06">0.6G</div>
+                
+                <div id="ball-trace-container"></div> 
+                
+                <div id="ball"></div>
+                <div id="crosshair-h"></div>
+                <div id="crosshair-v"></div>
+            </div>
+        </div>
 
-    const METER_MAX_G = 0.7; 
-    const BALL_RADIUS = 8; 
-    const TRACE_TIME_S = 3.0; 
-    const EMA_ALPHA = 0.3; 
-
-    // --- 状態変数 ---
-    let gravityOffset = { x: 0, y: 0 }; 
-    let isInitialized = false;
-    let filteredG = { x: 0, y: 0 }; 
-    let totalG = 0; 
-    let tracePoints = []; 
-
-    let maxG = { left: 0, right: 0, forward: 0, backward: 0 };
-    let peakG = 0;
-    let warningCooldown = false; 
-
-    // --- 描画・ユーティリティ関数 (省略) ---
-    // (中略 - drawMeter, resizeCanvas, updateMaxGDisplay, playWarningSound, checkWarning は変更なし)
-    
-    function drawMeter() {
-        const size = canvas.width;
-        const center = size / 2;
-        const radius = size / 2;
-
-        ctx.clearRect(0, 0, size, size);
-        ctx.strokeStyle = '#007aff';
-        ctx.fillStyle = '#007aff';
-        ctx.lineWidth = 1;
-        
-        // 目盛り円
-        ctx.setLineDash([5, 5]); 
-        const r03 = radius * (0.3 / METER_MAX_G);
-        ctx.beginPath();
-        ctx.arc(center, center, r03, 0, 2 * Math.PI);
-        ctx.stroke();
-
-        const r06 = radius * (0.6 / METER_MAX_G);
-        ctx.beginPath();
-        ctx.arc(center, center, r06, 0, 2 * Math.PI);
-        ctx.stroke();
-
-        ctx.setLineDash([]); 
-
-        // 十字線, 凡例, 残像, ボールの描画は省略...
-
-        const now = performance.now();
-        const maxTraceLife = TRACE_TIME_S * 1000;
-        while (tracePoints.length > 0 && now - tracePoints[0].timestamp > maxTraceLife) {
-            tracePoints.shift();
-        }
-
-        tracePoints.forEach(point => {
-            const lifeRatio = (now - point.timestamp) / maxTraceLife; 
-            const alpha = 1.0 - lifeRatio; 
-            ctx.fillStyle = `rgba(255, 0, 0, ${alpha})`;
-            ctx.beginPath();
-            ctx.arc(point.x, point.y, 2, 0, 2 * Math.PI); 
-            ctx.fill();
-        });
-
-        const pixelX = filteredG.x * (radius / METER_MAX_G); 
-        const pixelY = -filteredG.y * (radius / METER_MAX_G); 
-
-        const distance = Math.sqrt(pixelX * pixelX + pixelY * pixelY);
-        let drawX = center + pixelX;
-        let drawY = center + pixelY;
-
-        if (distance > radius) {
-            const ratio = radius / distance;
-            drawX = center + pixelX * ratio;
-            drawY = center + pixelY * ratio;
-        }
-
-        ctx.fillStyle = 'white';
-        ctx.beginPath();
-        ctx.arc(drawX, drawY, BALL_RADIUS, 0, 2 * Math.PI);
-        ctx.fill();
-
-        tracePoints.push({ x: drawX, y: drawY, timestamp: now });
-        
-        gDisplay.textContent = `${totalG.toFixed(2)} G`;
-    }
-
-    function resizeCanvas() {
-        const size = document.getElementById('gauge-area').offsetWidth; 
-        canvas.width = size;
-        canvas.height = size;
-        drawMeter(); 
-    }
-    resizeCanvas();
-    window.addEventListener('resize', resizeCanvas);
-
-    function updateMaxGDisplay() {
-        maxGLeftElement.textContent = maxG.left.toFixed(2);
-        maxGRightElement.textContent = maxG.right.toFixed(2);
-        maxGForwardElement.textContent = maxG.forward.toFixed(2);
-        maxGBackwardElement.textContent = maxG.backward.toFixed(2);
-    }
-
-    function playWarningSound() {
-        if (warningSound.readyState >= 2) {
-            warningSound.currentTime = 0; 
-            warningSound.play().catch(e => {});
-        }
-        logElement.textContent = `ログ: スリップ警告音を再生しました！ (G: ${totalG.toFixed(2)})`;
-    }
-
-    function checkWarning(currentG) {
-        if (peakG >= 0.4 && currentG < peakG - 0.3) {
-            if (!warningCooldown) {
-                playWarningSound();
-                warningCooldown = true;
-                setTimeout(() => { warningCooldown = false; }, 1000);
-            }
-            peakG = 0;
-        }
-        peakG = Math.max(peakG, currentG);
-    }
-    
-    // --- センサー処理 ---
-    function handleDeviceMotion(event) {
-        if (!isInitialized) return;
-
-        const acc = event.accelerationIncludingGravity;
-        if (!acc || acc.x === null) return; 
-
-        const gX = (acc.x - gravityOffset.x) / 9.80665; 
-        const gY = (acc.y - gravityOffset.y) / 9.80665; 
-
-        filteredG.x = (gX * EMA_ALPHA) + (filteredG.x * (1 - EMA_ALPHA));
-        filteredG.y = (gY * EMA_ALPHA) + (filteredG.y * (1 - EMA_ALPHA));
-
-        totalG = Math.sqrt(filteredG.x * filteredG.x + filteredG.y * filteredG.y);
-
-        if (filteredG.x > 0) { maxG.left = Math.max(maxG.left, filteredG.x); } 
-        else { maxG.right = Math.max(maxG.right, Math.abs(filteredG.x)); }
-        if (filteredG.y > 0) { maxG.forward = Math.max(maxG.forward, filteredG.y); } 
-        else { maxG.backward = Math.max(maxG.backward, Math.abs(filteredG.y)); }
-
-        updateMaxGDisplay();
-        checkWarning(totalG);
-        drawMeter();
-    }
-    
-    // --- センサー初期化ロジック ---
-    const initializeZeroPointAndStart = (event) => {
-        window.removeEventListener('devicemotion', initializeZeroPointAndStart);
-
-        const acc = event.accelerationIncludingGravity;
-
-        if (!acc || acc.x === null) {
-             logElement.textContent = 'ログ: センサーデータが不完全なため、初期化できませんでした。';
-             return;
-        }
-        
-        gravityOffset.x = acc.x;
-        gravityOffset.y = acc.y;
-        isInitialized = true;
-        
-        filteredG.x = 0;
-        filteredG.y = 0;
-
-        window.addEventListener('devicemotion', handleDeviceMotion);
-        
-        warningSound.volume = 0;
-        warningSound.play().catch(() => {});
-        warningSound.volume = 1;
-
-        logElement.textContent = `ログ: センサー初期化完了。X: ${gravityOffset.x.toFixed(2)} m/s², Y: ${gravityOffset.y.toFixed(2)} m/s² をゼロ点に設定しました。`;
-    };
-
-    function startMotionTracking() {
-        window.removeEventListener('devicemotion', handleDeviceMotion);
-        window.removeEventListener('devicemotion', initializeZeroPointAndStart);
-
-        logElement.textContent = 'ログ: センサーデータを取得し、ゼロ点を設定します...';
-        
-        window.addEventListener('devicemotion', initializeZeroPointAndStart);
-    }
-
-    // --- イベントハンドラ ---
-    requestPermissionButton.addEventListener('click', () => {
-        console.log("ボタンクリックイベント発生！"); // デバッグ用
-
-        if (isInitialized) {
-            logElement.textContent = 'ログ: 既にセンサーは初期化済みです。';
-            return;
-        }
-
-        // --- デバイスモーションセンサーのアクセス許可要求 ---
-        if (typeof DeviceMotionEvent.requestPermission === 'function') {
-            logElement.textContent = 'ログ: センサー許可ポップアップを表示します...';
+        <div id="control-panel">
+            <h2>操作・記録</h2>
+            <div id="controls">
+                <button id="request-permission">センサー許可/初期化</button>
+                <button id="reset-max">最大Gリセット</button>
+            </div>
             
-            DeviceMotionEvent.requestPermission().then(permissionState => {
-                if (permissionState === 'granted') {
-                    startMotionTracking();
-                } else {
-                    logElement.textContent = 'ログ: センサーの使用が拒否されました。設定を確認してください。';
-                }
-            }).catch(error => {
-                if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
-                    logElement.innerHTML = 'ログ: ⛔ **エラー: ポップアップが出ません。** HTTPSまたはlocalhostでアクセスしてください。';
-                } else {
-                    logElement.textContent = 'ログ: センサー許可リクエスト中にエラーが発生しました: ' + error.message;
-                }
-            });
-        } else {
-            // 許可が不要な環境
-            logElement.textContent = 'ログ: 許可不要な環境として、トラッキングを開始します。';
-            startMotionTracking();
-        }
-    });
-    
-    resetMaxGButton.addEventListener('click', () => {
-        maxG = { left: 0, right: 0, forward: 0, backward: 0 };
-        updateMaxGDisplay();
-        logElement.textContent = 'ログ: 最大G記録をリセットしました。';
-    });
-});
+            <div id="status">
+                <p>状態: <span id="status-text">待機中</span></p>
+                <div id="max-g-display">
+                    <p>Max G (左): <span id="max-g-left">0.00</span></p>
+                    <p>Max G (右): <span id="max-g-right">0.00</span></p>
+                    <p>Max G (前): <span id="max-g-front">0.00</span></p>
+                    <p>Max G (後): <span id="max-g-rear">0.00</span></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
