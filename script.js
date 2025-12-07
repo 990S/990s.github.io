@@ -24,8 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const METER_MAX_G = 0.7; 
     const BALL_RADIUS = 8; 
     const TRACE_TIME_S = 3.0; 
-    
-    // 🎯 変更箇所: 平滑化係数を0.3から0.08に下げて、振動を強く吸収します 🎯
+    // 平滑化係数 (滑らかさ) は0.08を維持
     const EMA_ALPHA = 0.08; 
 
     // --- 状態変数 ---
@@ -50,7 +49,7 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.fillStyle = '#007aff';
         ctx.lineWidth = 1;
         
-        // 目盛り円, 十字線, 凡例などの描画処理 (省略)
+        // (目盛り、十字線、凡例、残像の描画処理は省略)
         ctx.setLineDash([5, 5]); 
         const r03 = radius * (0.3 / METER_MAX_G);
         ctx.beginPath();
@@ -86,7 +85,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // --- ボール（現在のG）の描画 ---
         
         // filteredG.x (左右G) -> 画面上 X軸 (左右)
-        const pixelX = -filteredG.x * (radius / METER_MAX_G); 
+        const pixelX = filteredG.x * (radius / METER_MAX_G); 
         
         // filteredG.y (前後G) -> 画面上 Y軸 (Y軸は下がプラスなので反転: -filteredG.y)
         const pixelY = -filteredG.y * (radius / METER_MAX_G); 
@@ -98,12 +97,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if (distance > radius) {
             const ratio = radius / distance;
             drawX = center + pixelX * ratio;
-            drawY = center - pixelY * ratio;
+            drawY = center + pixelY * ratio;
         }
 
         ctx.fillStyle = 'white';
         ctx.beginPath();
-        ctx.arc(drawX, -drawY, BALL_RADIUS, 0, 2 * Math.PI);
+        ctx.arc(drawX, drawY, BALL_RADIUS, 0, 2 * Math.PI);
         ctx.fill();
 
         tracePoints.push({ x: drawX, y: drawY, timestamp: now });
@@ -153,20 +152,21 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!acc || acc.x === null || acc.y === null || acc.z === null) return; 
 
         // デバイス加速度 (重力成分除去)
-        const gX_device = (acc.y - gravityOffset.y) / 9.80665;
-        const gY_device = (acc.x - gravityOffset.x) / 9.80665;
+        const gX_device = (acc.x - gravityOffset.x) / 9.80665;
+        const gY_device = (acc.y - gravityOffset.y) / 9.80665;
         const gZ_device = (acc.z - gravityOffset.z) / 9.80665; 
         
-        // **【横向き・立てかけマッピング】**
+        // **【回転不問・軸マッピングの最終調整】**
         
-        // 1. 左右方向 (左右の動き): X軸を使用 (符号はそのまま)
-        const g_side = gX_device; 
+        // 1. 左右方向 (左右の動き): Y軸を採用し、符号を反転させる
+        //    * X軸は画面回転で符号が変わるため、Y軸を採用し、符号を調整します。
+        const g_side = -gY_device; 
 
-        // 2. 前後方向 (上下の動き): Z軸を使用し、符号を反転 
+        // 2. 前後方向 (上下の動き): Z軸を使用し、符号を反転 (動作済みなので維持)
         const g_forward = -gZ_device; 
 
         // --- フィルタリング (EMA) ---
-        // filteredG.x (左右G) ← g_side (X軸ベース)
+        // filteredG.x (左右G) ← g_side (Y軸ベース)
         filteredG.x = (g_side * EMA_ALPHA) + (filteredG.x * (1 - EMA_ALPHA)); 
         // filteredG.y (前後G) ← g_forward (Z軸ベース)
         filteredG.y = (g_forward * EMA_ALPHA) + (filteredG.y * (1 - EMA_ALPHA)); 
