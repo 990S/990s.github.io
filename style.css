@@ -58,13 +58,13 @@ h1 {
 
 #g-display {
     position: absolute;
-    top: 10%;
+    top: 0%;
     left: 50%;
     transform: translate(-50%, -50%);
     font-size: 2.0em; /* サイズを調整 */
     font-weight: bold;
     color: white;
-    /*text-shadow: 0 0 5px var(--color-grid);*/
+    text-shadow: 0 0 5px var(--color-grid);
 }
 
 /* --- 右パネル (コントロールと最大G) --- */
