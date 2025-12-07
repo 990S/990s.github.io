@@ -1,246 +1,162 @@
+:root {
+    --color-bg: #000000;
+    --color-meter-bg: #000000;
+    --color-ball: white;
+    --color-trace: rgba(255, 0, 0, 1.0);
+    --color-grid: #007aff; /* 青 */
+    --color-text: #007aff; /* 青 */
+    --meter-size: 300px; /* メーターの直径 */
+    --scale-max-g: 0.7; /* メーターの最大表示G */
+}
+
 body {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    font-family: sans-serif;
-    padding: 10px; 
-    /* 【ダークモード】背景を黒に */
-    background-color: #000000;
+    background-color: var(--color-bg);
+    color: var(--color-text);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    /* 横向き利用を想定し、画面全体を使用 */
     min-height: 100vh;
     margin: 0;
-    /* 【ダークモード】文字色を白に */
-    color: white; 
+    overflow: hidden; 
+}
+
+/* メインレイアウト: 横向きでメーターを左、コントロールを右に配置 */
+#main-layout {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100vw;
+    height: 100vh;
+    gap: 20px; /* メーターと右パネルの間隔 */
+    padding: 10px;
+    box-sizing: border-box;
 }
 
 h1 {
-    margin-top: 0;
-    margin-bottom: 10px; 
-    font-size: 1.5em; 
-}
-
-/* --- メインコンテナ --- */
-#main-content {
-    display: flex;
-    flex-direction: row; 
-    flex-wrap: wrap; 
-    width: 100%;
-    max-width: 1000px;
-    flex-grow: 1;
-    justify-content: center;
-    align-items: flex-start;
-    padding: 0 5px;
-    box-sizing: border-box;
+    color: white;
+    font-size: 1.2em; /* 小さくしてスペースを確保 */
+    margin-bottom: 15px;
 }
 
 /* --- メーターエリア --- */
-#meter-area {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    flex-shrink: 0;
-    margin-right: 20px; 
-    margin-bottom: 20px; 
-}
-
-#meter-container {
+#gauge-area {
     position: relative;
-    width: 250px; 
-    height: 250px;
-    border: 4px solid #007aff; 
-    /* 【ダークモード】メーター背景を黒に */
-    background-color: #000000;
+    width: var(--meter-size);
+    height: var(--meter-size);
+    /* 画面が小さい場合は縮小 */
+    flex-shrink: 1;
+    border: 2px solid var(--color-grid);
     border-radius: 50%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
+    background-color: var(--color-meter-bg);
+    box-shadow: 0 0 15px rgba(0, 122, 255, 0.5); 
 }
 
-/* ---------------------------------------------------- */
-/* Gフォース目盛 (0.7Gスケールに調整済み) */
-/* ---------------------------------------------------- */
-/* 0.6Gの目盛 (直径 214.3px) - 青色 */
-#meter-container::before {
-    content: '';
-    position: absolute;
-    width: 214px; /* 125px * (0.6 / 0.7) * 2 = 214.28px */
-    height: 214px;
-    /* 【要件】青い点線 */
-    border: 1px dashed rgba(0, 122, 255, 0.5);
-    /* 【修正済み】円形を保持 */
-    border-radius: 50%; 
-    pointer-events: none;
-    box-sizing: border-box;
-    z-index: 1; 
-}
-
-/* 0.3Gの目盛 (直径 107.1px) - 青色 */
-#meter-container::after {
-    content: '';
-    position: absolute;
-    width: 107px; /* 125px * (0.3 / 0.7) * 2 = 107.14px */
-    height: 107px;
-    /* 【要件】青い点線 */
-    border: 1px dashed rgba(0, 122, 255, 0.5);
-    /* 【修正済み】円形を保持 */
-    border-radius: 50%; 
-    pointer-events: none;
-    box-sizing: border-box;
-    z-index: 1; 
-}
-/* ---------------------------------------------------- */
-
-/* 【要件】目盛り凡例の基本スタイル */
-.g-label {
-    position: absolute;
-    color: #007aff;
-    font-size: 12px;
-    font-weight: bold;
-    z-index: 5;
-    transform: translate(-50%, -50%); 
-    pointer-events: none;
-}
-/* 0.3Gの凡例の位置 (メーター中心から半径 53.5pxの右側) */
-.g-label-03 {
-    top: 50%;
-    left: calc(50% + 55px); 
-}
-/* 0.6Gの凡例の位置 (メーター中心から半径 107.1pxの右側) */
-.g-label-06 {
-    top: 50%;
-    left: calc(50% + 109px); 
-}
-
-
-/* 残像を格納するコンテナ */
-#ball-trace-container {
-    position: absolute;
+#g-meter-canvas {
     width: 100%;
     height: 100%;
-    top: 0;
-    left: 0;
-    z-index: 3; 
+    display: block;
 }
 
-/* 個々の残像のスタイル */
-.trace-dot {
-    position: absolute;
-    width: 15px; 
-    height: 15px;
-    /* 【要件】残像を赤に */
-    background-color: rgba(255, 0, 0, 1.0); 
-    border-radius: 50%;
-    transform: translate(-50%, -50%); 
-    /* 【要件】残像時間を3秒に */
-    transition: opacity 3.0s linear; 
-}
-
-/* 十字線 */
-#crosshair-h, #crosshair-v {
-    position: absolute;
-    background-color: rgba(0, 122, 255, 0.4);
-    z-index: 4; 
-}
-#crosshair-h { width: 100%; height: 1px; }
-#crosshair-v { width: 1px; height: 100%; }
-
-/* ボール */
-#ball {
-    width: 35px; 
-    height: 35px;
-    /* 【要件】ボールを白に */
-    background-color: white;
-    border-radius: 50%;
+#g-display {
     position: absolute;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    transition: transform 0.05s ease-out;
-    z-index: 10; 
-    font-size: 0;
+    font-size: 2.0em; /* サイズを調整 */
+    font-weight: bold;
+    color: white;
+    text-shadow: 0 0 5px var(--color-grid);
 }
 
-/* --- コントロールパネル (右側) --- */
-#control-panel {
-    flex: 0 0 180px; 
-    padding: 15px;
+/* --- 右パネル (コントロールと最大G) --- */
+#right-panel {
     display: flex;
     flex-direction: column;
+    justify-content: center;
     align-items: center;
-    border: 1px solid #444;
-    border-radius: 8px;
-    /* 【ダークモード】コントロールパネル背景 */
-    background-color: #1a1a1a;
-    box-sizing: border-box;
-    /* 4分割表示に対応するため、最低高さを確保 */
-    min-height: 250px; 
-}
-#control-panel h2 {
-    margin-top: 0;
-    margin-bottom: 10px; 
-    font-size: 1.1em;
+    padding: 10px;
+    /* 縦方向のスペースに合わせて自動で幅を調整 */
+    max-width: 250px; 
+    flex-grow: 1;
 }
 
+/* --- コントロールとログ --- */
 #controls {
     display: flex;
-    flex-direction: column;
+    flex-direction: column; /* ボタンを縦に並べる */
     gap: 10px;
+    margin-bottom: 20px;
     width: 100%;
-    margin-bottom: 15px; 
 }
 
 button {
-    padding: 8px 10px;
-    font-size: 15px;
-    cursor: pointer;
+    background-color: var(--color-grid);
+    color: var(--color-bg);
     border: none;
+    padding: 8px 15px; /* サイズを調整 */
+    font-size: 0.9em;
+    font-weight: bold;
     border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+button:hover {
+    background-color: #3b9bff;
+}
+
+#log {
+    margin-top: 10px;
+    font-size: 0.7em;
+    color: gray;
+    width: 100%;
+    text-align: center;
+    word-break: break-all;
+}
+
+/* --- 最大G表示エリア --- */
+#max-g-display {
+    width: 100%;
+    text-align: left;
+    padding: 10px; /* サイズを調整 */
+    border: 1px solid var(--color-grid);
+    border-radius: 8px;
+    background-color: #1a1a1a;
+    font-size: 0.9em;
+}
+
+#max-g-display h2 {
+    color: white;
+    font-size: 1em;
+    margin-top: 0;
+    margin-bottom: 8px;
+    border-bottom: 1px solid var(--color-grid);
+    padding-bottom: 3px;
+    text-align: center;
+}
+
+.max-g-row {
+    margin-bottom: 4px;
+    display: flex;
+    justify-content: space-between;
+}
+
+.max-g-label {
+    color: var(--color-text);
+}
+
+.max-g-value {
+    font-weight: bold;
     color: white;
 }
 
-#request-permission {
-    background-color: #007aff;
-}
-
-#reset-max {
-    background-color: #444;
-}
-
-/* --- ステータス表示 (Max G 4分割) --- */
-#status {
-    text-align: left; 
-    padding: 5px 10px;
-    background-color: #1a1a1a;
-    border: 1px solid #444;
-    border-radius: 5px;
-    font-size: 1.0em;
-    width: 100%; 
-    box-sizing: border-box;
-}
-#status p {
-    margin: 3px 0;
-}
-#status span {
-    font-weight: bold;
-    color: #007aff;
-    /* 右端に揃える */
-    float: right; 
-}
-#max-g-display {
-    /* floatをクリアしてレイアウト崩れを防ぐ */
-    overflow: auto; 
-}
-
-/* 横向き（ランドスケープ）時の調整 */
-@media screen and (orientation: landscape) {
-    body {
-        padding: 5px; 
+/* 画面が非常に小さい場合の調整 */
+@media (max-height: 400px) {
+    :root {
+        --meter-size: 200px; 
     }
-    #main-content {
-        height: auto; 
-        align-items: center;
-    }
-    #meter-area {
-        margin-right: 30px;
-        margin-bottom: 0;
-    }
+    #g-display { font-size: 1.5em; }
+    #max-g-display { font-size: 0.8em; }
+    h1 { display: none; } /* タイトルを非表示にしてスペースを確保 */
 }
