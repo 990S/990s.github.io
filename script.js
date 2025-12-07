@@ -160,7 +160,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // **【横向き・立てかけマッピング】**
         
         // 1. 左右方向 (左右の動き): X軸を使用 (符号はそのまま)
-        const g_side = gX_device; 
+        const g_side = -gX_device; 
 
         // 2. 前後方向 (上下の動き): Z軸を使用し、符号を反転 
         const g_forward = -gZ_device; 
