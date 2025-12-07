@@ -24,7 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const METER_MAX_G = 0.7;
     const BALL_RADIUS = 8;
     const TRACE_TIME_S = 3.0;
-    const EMA_ALPHA = 0.1; //ここを０に近づけるとより多くの平均をとる
+    const EMA_ALPHA = 0.08; //ここを０に近づけるとより多くの平均をとる
 
     // --- 状態変数 ---
     // 重力オフセットは3軸で記録
@@ -122,7 +122,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         ctx.fillStyle = 'white';
         ctx.beginPath();
-        ctx.arc(drawX, drawY, BALL_RADIUS, 0, 2 * Math.PI);
+        ctx.arc(-drawX, -drawY, BALL_RADIUS, 0, 2 * Math.PI);
         ctx.fill();
 
         tracePoints.push({ x: drawX, y: drawY, timestamp: now });
