@@ -24,7 +24,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const METER_MAX_G = 0.7; 
     const BALL_RADIUS = 8; 
     const TRACE_TIME_S = 3.0; 
-    // 平滑化係数 (滑らかさ) は0.08を維持
     const EMA_ALPHA = 0.08; 
 
     // --- 状態変数 ---
@@ -49,7 +48,7 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.fillStyle = '#007aff';
         ctx.lineWidth = 1;
         
-        // (目盛り、十字線、凡例、残像の描画処理は省略)
+        // (中略 - 目盛り、十字線、凡例、残像の描画処理)
         ctx.setLineDash([5, 5]); 
         const r03 = radius * (0.3 / METER_MAX_G);
         ctx.beginPath();
@@ -82,7 +81,7 @@ document.addEventListener('DOMContentLoaded', () => {
             ctx.fill();
         });
 
-        // --- ボール（現在のG）の描画 ---
+        // --- 🎯 ボール（現在のG）の描画 🎯 ---
         
         // filteredG.x (左右G) -> 画面上 X軸 (左右)
         const pixelX = filteredG.x * (radius / METER_MAX_G); 
@@ -94,16 +93,18 @@ document.addEventListener('DOMContentLoaded', () => {
         let drawX = center + pixelX;
         let drawY = center + pixelY;
 
+        // ボールが枠の外に出ないように制限
         if (distance > radius) {
             const ratio = radius / distance;
             drawX = center + pixelX * ratio;
             drawY = center + pixelY * ratio;
         }
 
+        // 描画処理
         ctx.fillStyle = 'white';
         ctx.beginPath();
         ctx.arc(drawX, drawY, BALL_RADIUS, 0, 2 * Math.PI);
-        ctx.fill();
+        ctx.fill(); // ボールを描画
 
         tracePoints.push({ x: drawX, y: drawY, timestamp: now });
         
@@ -144,7 +145,7 @@ document.addEventListener('DOMContentLoaded', () => {
         peakG = Math.max(peakG, currentG);
     }
     
-    // --- センサー処理 (軸マッピングのコア修正) ---
+    // --- センサー処理 (軸マッピング) ---
     function handleDeviceMotion(event) {
         if (!isInitialized) return;
 
@@ -156,19 +157,16 @@ document.addEventListener('DOMContentLoaded', () => {
         const gY_device = (acc.y - gravityOffset.y) / 9.80665;
         const gZ_device = (acc.z - gravityOffset.z) / 9.80665; 
         
-        // **【回転不問・軸マッピングの最終調整】**
+        // **【回転不問・軸マッピング】**
         
-        // 1. 左右方向 (左右の動き): Y軸を採用し、符号を反転させる
-        //    * X軸は画面回転で符号が変わるため、Y軸を採用し、符号を調整します。
+        // 1. 左右方向 (左右の動き): Y軸を採用し、符号を反転させる (前回修正箇所を維持)
         const g_side = -gY_device; 
 
         // 2. 前後方向 (上下の動き): Z軸を使用し、符号を反転 (動作済みなので維持)
         const g_forward = -gZ_device; 
 
         // --- フィルタリング (EMA) ---
-        // filteredG.x (左右G) ← g_side (Y軸ベース)
         filteredG.x = (g_side * EMA_ALPHA) + (filteredG.x * (1 - EMA_ALPHA)); 
-        // filteredG.y (前後G) ← g_forward (Z軸ベース)
         filteredG.y = (g_forward * EMA_ALPHA) + (filteredG.y * (1 - EMA_ALPHA)); 
 
         totalG = Math.sqrt(filteredG.x * filteredG.x + filteredG.y * filteredG.y);
@@ -188,7 +186,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         updateMaxGDisplay();
         checkWarning(totalG);
-        drawMeter();
+        drawMeter(); // 描画関数を呼び出し
     }
     
     // --- センサー初期化ロジック (3軸オフセットの記録) ---
@@ -202,6 +200,7 @@ document.addEventListener('DOMContentLoaded', () => {
              return;
         }
         
+        // 3軸全ての重力オフセットを記録
         gravityOffset.x = acc.x;
         gravityOffset.y = acc.y;
         gravityOffset.z = acc.z;
@@ -224,7 +223,7 @@ document.addEventListener('DOMContentLoaded', () => {
         window.addEventListener('devicemotion', initializeZeroPointAndStart);
     }
 
-    // --- イベントハンドラ ---
+    // --- イベントハンドラ (省略) ---
     requestPermissionButton.addEventListener('click', () => {
         console.log("ボタンクリックイベント発生！"); 
 
