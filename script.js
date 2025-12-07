@@ -86,7 +86,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // --- ボール（現在のG）の描画 ---
         
         // filteredG.x (左右G) -> 画面上 X軸 (左右)
-        const pixelX = filteredG.y * (radius / METER_MAX_G); 
+        const pixelX = -filteredG.x * (radius / METER_MAX_G); 
         
         // filteredG.y (前後G) -> 画面上 Y軸 (Y軸は下がプラスなので反転: -filteredG.y)
         const pixelY = -filteredG.y * (radius / METER_MAX_G); 
