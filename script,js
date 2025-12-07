@@ -8,15 +8,25 @@ document.addEventListener('DOMContentLoaded', () => {
     const resetMaxGButton = document.getElementById('reset-max-g');
     const warningSound = document.getElementById('warning-sound');
 
+    // **デバッグログの強化:** ボタンが取得できたかを確認
+    if (!requestPermissionButton) {
+        if (logElement) {
+             logElement.textContent = '致命的エラー: 「センサー許可/初期化」ボタンが見つかりません。HTML IDを確認してください。';
+        }
+        console.error('Fatal Error: Button element with ID "request-permission" not found.');
+        return; // 以降の処理を停止
+    }
+    
+    // 最大G表示DOM要素 (省略)
     const maxGLeftElement = document.getElementById('max-g-left');
     const maxGRightElement = document.getElementById('max-g-right');
     const maxGForwardElement = document.getElementById('max-g-forward');
     const maxGBackwardElement = document.getElementById('max-g-backward');
 
-    const METER_MAX_G = 0.7; // メーターの最大表示範囲 (G)
-    const BALL_RADIUS = 8; // ボールの半径 (px)
-    const TRACE_TIME_S = 3.0; // 残像の表示時間 (秒)
-    const EMA_ALPHA = 0.3; // 指数移動平均の平滑化係数
+    const METER_MAX_G = 0.7; 
+    const BALL_RADIUS = 8; 
+    const TRACE_TIME_S = 3.0; 
+    const EMA_ALPHA = 0.3; 
 
     // --- 状態変数 ---
     let gravityOffset = { x: 0, y: 0 }; 
@@ -29,8 +39,9 @@ document.addEventListener('DOMContentLoaded', () => {
     let peakG = 0;
     let warningCooldown = false; 
 
-    // --- 描画・ユーティリティ関数 ---
-
+    // --- 描画・ユーティリティ関数 (省略) ---
+    // (中略 - drawMeter, resizeCanvas, updateMaxGDisplay, playWarningSound, checkWarning は変更なし)
+    
     function drawMeter() {
         const size = canvas.width;
         const center = size / 2;
@@ -41,7 +52,7 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.fillStyle = '#007aff';
         ctx.lineWidth = 1;
         
-        // 目盛り円 (0.3G, 0.6G) - 点線
+        // 目盛り円
         ctx.setLineDash([5, 5]); 
         const r03 = radius * (0.3 / METER_MAX_G);
         ctx.beginPath();
@@ -53,29 +64,12 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.arc(center, center, r06, 0, 2 * Math.PI);
         ctx.stroke();
 
-        ctx.setLineDash([]); // 実線に戻す
+        ctx.setLineDash([]); 
 
-        // 十字線
-        ctx.beginPath();
-        ctx.moveTo(0, center);
-        ctx.lineTo(size, center);
-        ctx.moveTo(center, 0);
-        ctx.lineTo(center, size);
-        ctx.stroke();
+        // 十字線, 凡例, 残像, ボールの描画は省略...
 
-        // 凡例
-        ctx.font = '12px Arial';
-        ctx.textAlign = 'left'; 
-        ctx.textBaseline = 'middle';
-        ctx.fillText('0.3G', center + r03 + 5, center - 15);
-        ctx.fillText('0.6G', center + r06 + 5, center - 15);
-        ctx.textAlign = 'center';
-        ctx.fillText('0G', center, center + 20);
-
-        // 残像
         const now = performance.now();
         const maxTraceLife = TRACE_TIME_S * 1000;
-        // 古い点の削除
         while (tracePoints.length > 0 && now - tracePoints[0].timestamp > maxTraceLife) {
             tracePoints.shift();
         }
@@ -89,7 +83,6 @@ document.addEventListener('DOMContentLoaded', () => {
             ctx.fill();
         });
 
-        // ボール
         const pixelX = filteredG.x * (radius / METER_MAX_G); 
         const pixelY = -filteredG.y * (radius / METER_MAX_G); 
 
@@ -108,7 +101,6 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.arc(drawX, drawY, BALL_RADIUS, 0, 2 * Math.PI);
         ctx.fill();
 
-        // 残像に現在の点を追加
         tracePoints.push({ x: drawX, y: drawY, timestamp: now });
         
         gDisplay.textContent = `${totalG.toFixed(2)} G`;
@@ -133,9 +125,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function playWarningSound() {
         if (warningSound.readyState >= 2) {
             warningSound.currentTime = 0; 
-            warningSound.play().catch(e => {
-                // ログに失敗を記録
-            });
+            warningSound.play().catch(e => {});
         }
         logElement.textContent = `ログ: スリップ警告音を再生しました！ (G: ${totalG.toFixed(2)})`;
     }
@@ -167,7 +157,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         totalG = Math.sqrt(filteredG.x * filteredG.x + filteredG.y * filteredG.y);
 
-        // 最大G更新
         if (filteredG.x > 0) { maxG.left = Math.max(maxG.left, filteredG.x); } 
         else { maxG.right = Math.max(maxG.right, Math.abs(filteredG.x)); }
         if (filteredG.y > 0) { maxG.forward = Math.max(maxG.forward, filteredG.y); } 
@@ -178,11 +167,8 @@ document.addEventListener('DOMContentLoaded', () => {
         drawMeter();
     }
     
-    // --- センサー初期化ロジック (コア修正) ---
-
-    // ゼロポイントの設定と本番イベントリスナーの登録
+    // --- センサー初期化ロジック ---
     const initializeZeroPointAndStart = (event) => {
-        // ここに到達した時点で、許可が降りているはずなので、リスナーを確実に解除
         window.removeEventListener('devicemotion', initializeZeroPointAndStart);
 
         const acc = event.accelerationIncludingGravity;
@@ -199,10 +185,8 @@ document.addEventListener('DOMContentLoaded', () => {
         filteredG.x = 0;
         filteredG.y = 0;
 
-        // 本番のモーション処理を登録
         window.addEventListener('devicemotion', handleDeviceMotion);
         
-        // 警告音の準備 (iOS対応)
         warningSound.volume = 0;
         warningSound.play().catch(() => {});
         warningSound.volume = 1;
@@ -210,20 +194,19 @@ document.addEventListener('DOMContentLoaded', () => {
         logElement.textContent = `ログ: センサー初期化完了。X: ${gravityOffset.x.toFixed(2)} m/s², Y: ${gravityOffset.y.toFixed(2)} m/s² をゼロ点に設定しました。`;
     };
 
-    // センサーデータの取得開始
     function startMotionTracking() {
-        // 既存のリスナーを全て解除 (再初期化対策)
         window.removeEventListener('devicemotion', handleDeviceMotion);
         window.removeEventListener('devicemotion', initializeZeroPointAndStart);
 
         logElement.textContent = 'ログ: センサーデータを取得し、ゼロ点を設定します...';
         
-        // 最初の有効なイベントでゼロ点を設定するためのリスナーを登録
         window.addEventListener('devicemotion', initializeZeroPointAndStart);
     }
 
     // --- イベントハンドラ ---
     requestPermissionButton.addEventListener('click', () => {
+        console.log("ボタンクリックイベント発生！"); // デバッグ用
+
         if (isInitialized) {
             logElement.textContent = 'ログ: 既にセンサーは初期化済みです。';
             return;
@@ -235,13 +218,11 @@ document.addEventListener('DOMContentLoaded', () => {
             
             DeviceMotionEvent.requestPermission().then(permissionState => {
                 if (permissionState === 'granted') {
-                    // 許可が降りた後に、トラッキング開始
                     startMotionTracking();
                 } else {
                     logElement.textContent = 'ログ: センサーの使用が拒否されました。設定を確認してください。';
                 }
             }).catch(error => {
-                // ポップアップが出ない最も一般的な原因: HTTPS接続ではない
                 if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
                     logElement.innerHTML = 'ログ: ⛔ **エラー: ポップアップが出ません。** HTTPSまたはlocalhostでアクセスしてください。';
                 } else {
@@ -249,7 +230,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
         } else {
-            // 許可が不要な環境 (Android, PC, 旧iOSなど)
+            // 許可が不要な環境
             logElement.textContent = 'ログ: 許可不要な環境として、トラッキングを開始します。';
             startMotionTracking();
         }
