@@ -58,7 +58,7 @@ h1 {
 
 #g-display {
     position: absolute;
-    top: 50%;
+    top: 10%;
     left: 50%;
     transform: translate(-50%, -50%);
     font-size: 2.0em; /* サイズを調整 */
