@@ -138,8 +138,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!acc || acc.x === null || acc.y === null || acc.z === null) return; 
 
         // デバイス加速度 (重力成分除去)
-        const gX_device = (acc.x - gravityOffset.x) / 9.80665;
-        const gY_device = (acc.y - gravityOffset.y) / 9.80665;
+        const gX_device = (acc.y - gravityOffset.y) / 9.80665;
+        const gY_device = (acc.x - gravityOffset.x) / 9.80665;
         const gZ_device = (acc.z - gravityOffset.z) / 9.80665; 
         
         // **【コア修正: 横向き・立てかけマッピング】**
