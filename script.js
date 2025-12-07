@@ -150,7 +150,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // 2. 左右方向 (左右の動き): X軸を使用 (Y軸だと左右反転の可能性あり)
         //    - 左旋回(左)は Xがマイナス (-) の時、画面は左へ (filteredG.x -)
         //    - → 符号を反転させる (マイナスが左、プラスが右、という直感的な表示にするため)
-        const g_side = -gX_device; 
+        const g_side = gX_device; 
 
         // --- フィルタリング (EMA) ---
         // filteredG.x (左右G) ← g_side
