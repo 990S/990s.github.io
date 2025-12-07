@@ -156,6 +156,7 @@ h1 {
     transform: translate(-50%, -50%);
     transition: transform 0.05s ease-out;
     z-index: 10; 
+    font-size: 0;
 }
 
 /* --- コントロールパネル (右側) --- */
