@@ -98,12 +98,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if (distance > radius) {
             const ratio = radius / distance;
             drawX = center + pixelX * ratio;
-            drawY = center + pixelY * ratio;
+            drawY = center - pixelY * ratio;
         }
 
         ctx.fillStyle = 'white';
         ctx.beginPath();
-        ctx.arc(-drawX, drawY, BALL_RADIUS, 0, 2 * Math.PI);
+        ctx.arc(drawX, -drawY, BALL_RADIUS, 0, 2 * Math.PI);
         ctx.fill();
 
         tracePoints.push({ x: drawX, y: drawY, timestamp: now });
