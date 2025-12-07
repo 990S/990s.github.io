@@ -86,13 +86,13 @@ document.addEventListener('DOMContentLoaded', () => {
         // --- ボール（現在のG）の描画 ---
         
         // filteredG.x (左右G) -> 画面上 X軸 (左右)
-        const pixelX = -filteredG.x * (radius / METER_MAX_G); 
+        const pixelX = filteredG.x * (radius / METER_MAX_G); 
         
         // filteredG.y (前後G) -> 画面上 Y軸 (Y軸は下がプラスなので反転: -filteredG.y)
         const pixelY = -filteredG.y * (radius / METER_MAX_G); 
 
         const distance = Math.sqrt(pixelX * pixelX + pixelY * pixelY);
-        let drawX = center + pixelX;
+        let drawX = center - pixelX;
         let drawY = center + pixelY;
 
         if (distance > radius) {
