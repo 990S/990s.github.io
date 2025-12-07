@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // --- 定数とDOM要素の取得 (変更なし) ---
+    // --- 定数とDOM要素の取得 ---
     const canvas = document.getElementById('g-meter-canvas');
     const ctx = canvas.getContext('2d');
     const gDisplay = document.getElementById('g-display');
@@ -21,16 +21,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const maxGForwardElement = document.getElementById('max-g-forward');
     const maxGBackwardElement = document.getElementById('max-g-backward');
 
-    const METER_MAX_G = 0.7;
-    const BALL_RADIUS = 8;
-    const TRACE_TIME_S = 3.0;
-    const EMA_ALPHA = 0.08; //ここを０に近づけるとより多くの平均をとる
+    const METER_MAX_G = 0.7; 
+    const BALL_RADIUS = 8; 
+    const TRACE_TIME_S = 3.0; 
+    
+    // 🎯 変更箇所: 平滑化係数を0.3から0.08に下げて、振動を強く吸収します 🎯
+    const EMA_ALPHA = 0.08; 
 
     // --- 状態変数 ---
-    // 重力オフセットは3軸で記録
     let gravityOffset = { x: 0, y: 0, z: 0 }; 
     let isInitialized = false;
-    // filteredG.x: 左右G (メーター横軸), filteredG.y: 前後G (メーター縦軸)
     let filteredG = { x: 0, y: 0 }; 
     let totalG = 0; 
     let tracePoints = []; 
@@ -39,26 +39,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let peakG = 0;
     let warningCooldown = false; 
 
-    // --- ユーティリティ関数 (省略) ---
-    function updateMaxGDisplay() {
-        maxGLeftElement.textContent = maxG.left.toFixed(2);
-        maxGRightElement.textContent = maxG.right.toFixed(2);
-        maxGForwardElement.textContent = maxG.forward.toFixed(2);
-        maxGBackwardElement.textContent = maxG.backward.toFixed(2);
-    }
-    // ... (resizeCanvas, playWarningSound, checkWarningは省略) ...
-
-    function resizeCanvas() {
-        const size = document.getElementById('gauge-area').offsetWidth; 
-        canvas.width = size;
-        canvas.height = size;
-        drawMeter(); 
-    }
-    resizeCanvas();
-    window.addEventListener('resize', resizeCanvas);
-
-
-    // --- メーター描画関数 (軸マッピング修正済み) ---
+    // --- メーター描画関数 ---
     function drawMeter() {
         const size = canvas.width;
         const center = size / 2;
@@ -69,7 +50,7 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.fillStyle = '#007aff';
         ctx.lineWidth = 1;
         
-        // (目盛り、十字線、凡例、残像の描画は変更なし)
+        // 目盛り円, 十字線, 凡例などの描画処理 (省略)
         ctx.setLineDash([5, 5]); 
         const r03 = radius * (0.3 / METER_MAX_G);
         ctx.beginPath();
@@ -122,7 +103,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         ctx.fillStyle = 'white';
         ctx.beginPath();
-        ctx.arc(-drawX, drawY, BALL_RADIUS, 0, 2 * Math.PI);
+        ctx.arc(drawX, drawY, BALL_RADIUS, 0, 2 * Math.PI);
         ctx.fill();
 
         tracePoints.push({ x: drawX, y: drawY, timestamp: now });
@@ -130,6 +111,40 @@ document.addEventListener('DOMContentLoaded', () => {
         gDisplay.textContent = `${totalG.toFixed(2)} G`;
     }
 
+    function resizeCanvas() {
+        const size = document.getElementById('gauge-area').offsetWidth; 
+        canvas.width = size;
+        canvas.height = size;
+        drawMeter(); 
+    }
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+
+    function updateMaxGDisplay() {
+        maxGLeftElement.textContent = maxG.left.toFixed(2);
+        maxGRightElement.textContent = maxG.right.toFixed(2);
+        maxGForwardElement.textContent = maxG.forward.toFixed(2);
+        maxGBackwardElement.textContent = maxG.backward.toFixed(2);
+    }
+
+    function playWarningSound() {
+        if (warningSound.readyState >= 2) {
+            warningSound.currentTime = 0; 
+            warningSound.play().catch(e => {});
+        }
+        logElement.textContent = `ログ: スリップ警告音を再生しました！ (G: ${totalG.toFixed(2)})`;
+    }
+
+    function checkWarning(currentG) {
+        if (peakG >= 0.4 && currentG < peakG - 0.3) {
+            if (true) { 
+                // playWarningSound();
+            }
+            peakG = 0;
+        }
+        peakG = Math.max(peakG, currentG);
+    }
+    
     // --- センサー処理 (軸マッピングのコア修正) ---
     function handleDeviceMotion(event) {
         if (!isInitialized) return;
@@ -138,44 +153,41 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!acc || acc.x === null || acc.y === null || acc.z === null) return; 
 
         // デバイス加速度 (重力成分除去)
-        const gX_device = (acc.y - gravityOffset.y) / 9.80665;
-        const gY_device = -(acc.x - gravityOffset.x) / 9.80665;
-        const gZ_device = -(acc.z - gravityOffset.z) / 9.80665; 
+        const gX_device = (acc.x - gravityOffset.x) / 9.80665;
+        const gY_device = (acc.y - gravityOffset.y) / 9.80665;
+        const gZ_device = (acc.z - gravityOffset.z) / 9.80665; 
         
-        // **【コア修正: 横向き・立てかけマッピング】**
-        // 1. 前後方向 (上下の動き): Z軸を使用
-        //    - 加速(前)は Zがプラス (+) の時、画面は上へ (filteredG.y +)
-        const g_forward = gZ_device; 
-
-        // 2. 左右方向 (左右の動き): X軸を使用 (Y軸だと左右反転の可能性あり)
-        //    - 左旋回(左)は Xがマイナス (-) の時、画面は左へ (filteredG.x -)
-        //    - → 符号を反転させる (マイナスが左、プラスが右、という直感的な表示にするため)
+        // **【横向き・立てかけマッピング】**
+        
+        // 1. 左右方向 (左右の動き): X軸を使用 (符号はそのまま)
         const g_side = gX_device; 
 
+        // 2. 前後方向 (上下の動き): Z軸を使用し、符号を反転 
+        const g_forward = -gZ_device; 
+
         // --- フィルタリング (EMA) ---
-        // filteredG.x (左右G) ← g_side
+        // filteredG.x (左右G) ← g_side (X軸ベース)
         filteredG.x = (g_side * EMA_ALPHA) + (filteredG.x * (1 - EMA_ALPHA)); 
-        // filteredG.y (前後G) ← g_forward
+        // filteredG.y (前後G) ← g_forward (Z軸ベース)
         filteredG.y = (g_forward * EMA_ALPHA) + (filteredG.y * (1 - EMA_ALPHA)); 
 
         totalG = Math.sqrt(filteredG.x * filteredG.x + filteredG.y * filteredG.y);
 
         // --- 最大G記録の更新 ---
-        // X軸 (左右方向): +Xが左、-Xが右
-        if (filteredG.x < 0) { // 左方向
+        if (filteredG.x > 0) { 
             maxG.left = Math.max(maxG.left, filteredG.x);
-        } else { // 右方向 
+        } else { 
             maxG.right = Math.max(maxG.right, Math.abs(filteredG.x));
         }
 
-        // Y軸 (前後方向): +Yが前(加速)、-Yが後(減速)
-        if (filteredG.y > 0) { // 前方向 (加速)
+        if (filteredG.y > 0) { 
             maxG.forward = Math.max(maxG.forward, filteredG.y);
-        } else { // 後方向 (減速/ブレーキ)
+        } else { 
             maxG.backward = Math.max(maxG.backward, Math.abs(filteredG.y));
         }
 
         updateMaxGDisplay();
+        checkWarning(totalG);
         drawMeter();
     }
     
@@ -190,7 +202,6 @@ document.addEventListener('DOMContentLoaded', () => {
              return;
         }
         
-        // 重力オフセットを3軸すべてで記録
         gravityOffset.x = acc.x;
         gravityOffset.y = acc.y;
         gravityOffset.z = acc.z;
@@ -201,9 +212,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         window.addEventListener('devicemotion', handleDeviceMotion);
         
-        // 警告音の準備 (iOS対応)
-        // ... (警告音の初期化処理は省略) ...
-
         logElement.textContent = `ログ: センサー初期化完了。X: ${gravityOffset.x.toFixed(2)}, Y: ${gravityOffset.y.toFixed(2)}, Z: ${gravityOffset.z.toFixed(2)} をゼロ点に設定しました。`;
     };
 
@@ -216,7 +224,7 @@ document.addEventListener('DOMContentLoaded', () => {
         window.addEventListener('devicemotion', initializeZeroPointAndStart);
     }
 
-    // --- イベントハンドラ (省略) ---
+    // --- イベントハンドラ ---
     requestPermissionButton.addEventListener('click', () => {
         console.log("ボタンクリックイベント発生！"); 
 
@@ -247,7 +255,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
     
-    // ... (resetMaxGButton のイベントハンドラは省略) ...
     resetMaxGButton.addEventListener('click', () => {
         maxG = { left: 0, right: 0, forward: 0, backward: 0 };
         updateMaxGDisplay();
