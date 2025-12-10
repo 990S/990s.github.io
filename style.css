@@ -51,12 +51,11 @@ h1 {
 /* Gメーター (中央) */
 #gauge-area {
     position: relative;
-    /* 🎯 楕円バグ修正: width/height を max に依存させ、アスペクト比を固定する 🎯 */
     max-width: var(--meter-size); 
     max-height: var(--meter-size);
-    width: 40vw; /* 画面サイズの変動に対応するため vw を利用 */
+    width: 40vw; 
     height: 40vw;
-    aspect-ratio: 1 / 1; /* 正方形であることを保証 */
+    aspect-ratio: 1 / 1; 
     
     flex-shrink: 0; 
     border: 2px solid var(--color-grid);
@@ -89,12 +88,13 @@ h1 {
     justify-content: center;
     align-items: center;
     padding: 10px;
+    /* 幅がゼロにならないよう min-width を維持 */
     flex-basis: 25%; 
     min-width: 180px;
     max-width: 250px;
 }
 
-/* 🎯 変更点: ボタンを縦並びに戻す 🎯 */
+/* 🎯 修正点: ボタンの縦並びを確定 🎯 */
 #controls {
     display: flex;
     flex-direction: column; /* 縦並び */
@@ -104,8 +104,8 @@ h1 {
     max-width: 180px;
 }
 
-/* 🎯 削除: button-row はもう使わない 🎯 */
-/* .button-row { display: none; } */ 
+/* 以前使用した .button-row クラスはHTMLに存在しないため削除 */
+/* .button-row {} */ 
 
 button {
     background-color: var(--color-grid);
@@ -118,7 +118,6 @@ button {
     cursor: pointer;
     transition: background-color 0.3s;
     
-    /* 🎯 変更点: 縦並びなので横幅は100% 🎯 */
     width: 100%; 
     flex-grow: 0; 
     flex-basis: auto;
@@ -129,31 +128,4 @@ button:hover {
     background-color: #3b9bff;
 }
 
-/* ... (後略: max-g-display 以下のスタイルは変更なし) ... */
-
-/* スマートフォンでの縦画面対応 (Gメーターを小さくする) */
-@media (max-width: 768px) {
-    #main-layout {
-        flex-direction: column;
-        justify-content: flex-start;
-        height: auto;
-        min-height: 100vh;
-    }
-    #left-panel, #right-panel {
-        width: 90%;
-        max-width: none;
-        min-width: 90%;
-        margin-bottom: 10px;
-    }
-    /* スマホでは「最大G表示」「Gメーター」「ボタン群」の順に縦に並べる */
-    #left-panel { order: 1; }
-    #gauge-area { 
-        order: 2; 
-        width: 80vw; 
-        height: 80vw; 
-        max-width: 300px; 
-        max-height: 300px; 
-    }
-    #right-panel { order: 3; }
-    #controls { max-width: 90%; }
-}
+/* ... (後略: max-g-display やメディアクエリの設定は省略) ... */
