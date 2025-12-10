@@ -21,10 +21,11 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
     
-    const maxGLeftElement = document.getElementById('max-g-left');
-    const maxGRightElement = document.getElementById('max-g-right');
-    const maxGForwardElement = document.getElementById('max-g-forward');
-    const maxGBackwardElement = document.getElementById('max-g-backward');
+    // 🎯 変更点: 最大G表示のIDをHTMLの新しい配置に合わせる 🎯
+    const maxGLeftElement = document.getElementById('value-left');
+    const maxGRightElement = document.getElementById('value-right');
+    const maxGForwardElement = document.getElementById('value-forward');
+    const maxGBackwardElement = document.getElementById('value-backward');
 
     const METER_MAX_G = 0.7; 
     const BALL_RADIUS = 8; 
@@ -42,14 +43,11 @@ document.addEventListener('DOMContentLoaded', () => {
     let peakG = 0;
     let warningCooldown = false; 
     
-    // 軸反転の状態を保持する変数 (デフォルトは反転なし: 1)
-    let flipSide = 1; // 左右の符号を制御 (1 または -1)
-    let flipForward = 1; // 前後の符号を制御 (1 または -1)
+    let flipSide = 1; 
+    let flipForward = 1; 
 
     // --- メーター描画関数 (省略) ---
     function drawMeter() {
-        // ... (省略) ...
-        
         const size = canvas.width;
         const center = size / 2;
         const radius = size / 2;
@@ -59,7 +57,38 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.fillStyle = '#007aff';
         ctx.lineWidth = 1;
         
-        // (中略 - グリッド、トレース、G値表示)
+        // (中略 - グリッド、トレースの描画処理)
+        ctx.setLineDash([5, 5]); 
+        const r03 = radius * (0.3 / METER_MAX_G);
+        ctx.beginPath();
+        ctx.arc(center, center, r03, 0, 2 * Math.PI);
+        ctx.stroke();
+        const r06 = radius * (0.6 / METER_MAX_G);
+        ctx.beginPath();
+        ctx.arc(center, center, r06, 0, 2 * Math.PI);
+        ctx.stroke();
+        ctx.setLineDash([]); 
+        ctx.beginPath();
+        ctx.moveTo(0, center);
+        ctx.lineTo(size, center);
+        ctx.moveTo(center, 0);
+        ctx.lineTo(center, size);
+        ctx.stroke();
+        
+        const now = performance.now();
+        const maxTraceLife = TRACE_TIME_S * 1000;
+        while (tracePoints.length > 0 && now - tracePoints[0].timestamp > maxTraceLife) {
+            tracePoints.shift();
+        }
+
+        tracePoints.forEach(point => {
+            const lifeRatio = (now - point.timestamp) / maxTraceLife; 
+            const alpha = 1.0 - lifeRatio; 
+            ctx.fillStyle = `rgba(255, 0, 0, ${alpha})`;
+            ctx.beginPath();
+            ctx.arc(point.x, point.y, 2, 0, 2 * Math.PI); 
+            ctx.fill();
+        });
 
         // --- ボール（現在のG）の描画 ---
         
@@ -81,7 +110,7 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.arc(drawX, drawY, BALL_RADIUS, 0, 2 * Math.PI);
         ctx.fill(); 
 
-        tracePoints.push({ x: drawX, y: drawY, timestamp: performance.now() });
+        tracePoints.push({ x: drawX, y: drawY, timestamp: now });
         
         gDisplay.textContent = `${totalG.toFixed(2)} G`;
     }
@@ -95,13 +124,15 @@ document.addEventListener('DOMContentLoaded', () => {
     resizeCanvas();
     window.addEventListener('resize', resizeCanvas);
 
+    // 🎯 変更点: HTML IDの変更に合わせて要素更新を修正 🎯
     function updateMaxGDisplay() {
-        maxGLeftElement.textContent = maxG.left.toFixed(2);
-        maxGRightElement.textContent = maxG.right.toFixed(2);
-        maxGForwardElement.textContent = maxG.forward.toFixed(2);
-        maxGBackwardElement.textContent = maxG.backward.toFixed(2);
+        if (maxGLeftElement) maxGLeftElement.textContent = maxG.left.toFixed(2);
+        if (maxGRightElement) maxGRightElement.textContent = maxG.right.toFixed(2);
+        if (maxGForwardElement) maxGForwardElement.textContent = maxG.forward.toFixed(2);
+        if (maxGBackwardElement) maxGBackwardElement.textContent = maxG.backward.toFixed(2);
     }
-
+    // ... (後略: checkWarning, handleDeviceMotion, initializeZeroPointAndStart, startMotionTracking, イベントハンドラは変更なし)
+    
     function checkWarning(currentG) {
         if (peakG >= 0.4 && currentG < peakG - 0.3) {
             if (true) { 
@@ -112,7 +143,6 @@ document.addEventListener('DOMContentLoaded', () => {
         peakG = Math.max(peakG, currentG);
     }
     
-    // --- センサー処理 (軸マッピングのコア修正) ---
     function handleDeviceMotion(event) {
         if (!isInitialized) return;
 
@@ -124,24 +154,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const gY_device = (acc.y - gravityOffset.y) / 9.80665;
         const gZ_device = (acc.z - gravityOffset.z) / 9.80665; 
         
-        // **【反転ロジック修正】**
-        
-        // 基本の軸マッピング (Y軸を左右、Z軸を前後) に、flip変数を乗算して最終的な符号を制御
-        
-        // 1. 左右方向 (Y軸): Y軸にflipSideを乗算して符号を制御
-        //    * 最初の設定で符号を反転させる (-gY_device) 処理は、flipSide に任せます。
-        //    * ここで flipSide の初期値を -1 に変更し、ボタンが押されると 1 になるようにするか、
-        //    * または、flipSide の初期値を 1 に戻し、Y軸の符号を外部から制御します。
-        
-        // 🎯 修正点: gY_device の符号を直接 flipSide で制御する 🎯
-        // Y軸が本来の左右の動きの軸で、-1で反転させることで、ホームボタン左右問題を吸収し、
-        // さらに flipSide でユーザー反転を可能にする。
-        const g_side = gY_device * (-1 * flipSide); // -1 を乗算することで、デフォルトの反転を維持しつつ、flipSide でユーザー反転を可能にする
+        // 反転ロジック
+        const g_side = gY_device * (-1 * flipSide); 
+        const g_forward = gZ_device * (-1 * flipForward); 
 
-        // 2. 前後方向 (Z軸): Z軸に flipForward を乗算して符号を制御
-        // 🎯 修正点: gZ_device の符号を直接 flipForward で制御する 🎯
-        const g_forward = gZ_device * (-1 * flipForward); // -1 を乗算することで、デフォルトの反転を維持しつつ、flipForward でユーザー反転を可能にする
-        
         // --- フィルタリング (EMA) ---
         filteredG.x = (g_side * EMA_ALPHA) + (filteredG.x * (1 - EMA_ALPHA)); 
         filteredG.y = (g_forward * EMA_ALPHA) + (filteredG.y * (1 - EMA_ALPHA)); 
@@ -166,7 +182,6 @@ document.addEventListener('DOMContentLoaded', () => {
         drawMeter();
     }
     
-    // --- センサー初期化ロジック (省略) ---
     const initializeZeroPointAndStart = (event) => {
         window.removeEventListener('devicemotion', initializeZeroPointAndStart);
 
@@ -200,7 +215,6 @@ document.addEventListener('DOMContentLoaded', () => {
         window.addEventListener('devicemotion', initializeZeroPointAndStart);
     }
     
-    // --- 新しいイベントハンドラ: 反転ボタンの処理 ---
     flipSideBtn.addEventListener('click', () => {
         flipSide *= -1; 
         const status = flipSide === 1 ? '通常' : '反転';
@@ -214,7 +228,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
 
-    // --- 既存のイベントハンドラ (省略) ---
     requestPermissionButton.addEventListener('click', () => {
         if (isInitialized) {
             logElement.textContent = 'ログ: 既にセンサーは初期化済みです。';
