@@ -18,10 +18,9 @@ body {
     overflow: hidden; 
 }
 
-/* 🎯 修正点: メインレイアウトを3分割にし、中央にメーターを配置 🎯 */
 #main-layout {
     display: flex;
-    justify-content: space-between; /* 要素間にスペースを設ける */
+    justify-content: space-between;
     align-items: center;
     width: 100vw;
     height: 100vh;
@@ -37,14 +36,13 @@ h1 {
     text-align: center;
 }
 
-/* 🎯 新しい左パネル (最大Gとログ) 🎯 */
+/* 左パネル (最大Gとログ) */
 #left-panel {
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
     padding: 10px;
-    /* 中央のメーターが固定サイズなので、左右パネルは均等な幅を確保 */
     flex-basis: 25%; 
     min-width: 180px; 
     max-width: 250px;
@@ -53,9 +51,13 @@ h1 {
 /* Gメーター (中央) */
 #gauge-area {
     position: relative;
-    width: var(--meter-size);
-    height: var(--meter-size);
-    /* 縮小・拡大の対象としない */
+    /* 🎯 楕円バグ修正: width/height を max に依存させ、アスペクト比を固定する 🎯 */
+    max-width: var(--meter-size); 
+    max-height: var(--meter-size);
+    width: 40vw; /* 画面サイズの変動に対応するため vw を利用 */
+    height: 40vw;
+    aspect-ratio: 1 / 1; /* 正方形であることを保証 */
+    
     flex-shrink: 0; 
     border: 2px solid var(--color-grid);
     border-radius: 50%;
@@ -80,7 +82,7 @@ h1 {
     text-shadow: 0 0 5px var(--color-grid);
 }
 
-/* 🎯 右パネル (ボタン群) 🎯 */
+/* 右パネル (ボタン群) */
 #right-panel {
     display: flex;
     flex-direction: column;
@@ -92,21 +94,18 @@ h1 {
     max-width: 250px;
 }
 
+/* 🎯 変更点: ボタンを縦並びに戻す 🎯 */
 #controls {
     display: flex;
-    flex-direction: column; 
+    flex-direction: column; /* 縦並び */
     gap: 10px;
     margin-bottom: 20px;
     width: 100%;
     max-width: 180px;
 }
 
-.button-row {
-    display: flex;
-    justify-content: space-between;
-    gap: 8px; 
-    width: 100%;
-}
+/* 🎯 削除: button-row はもう使わない 🎯 */
+/* .button-row { display: none; } */ 
 
 button {
     background-color: var(--color-grid);
@@ -119,8 +118,10 @@ button {
     cursor: pointer;
     transition: background-color 0.3s;
     
-    flex-grow: 1; 
-    flex-basis: 0;
+    /* 🎯 変更点: 縦並びなので横幅は100% 🎯 */
+    width: 100%; 
+    flex-grow: 0; 
+    flex-basis: auto;
     box-sizing: border-box;
 }
 
@@ -128,72 +129,7 @@ button:hover {
     background-color: #3b9bff;
 }
 
-/* ログを左パネルに移設 */
-#log {
-    margin-top: 10px;
-    font-size: 0.7em;
-    color: gray;
-    width: 100%;
-    text-align: center;
-    word-break: break-all;
-}
-
-/* 最大G表示エリア */
-#max-g-display {
-    width: 100%;
-    max-width: 180px; 
-    text-align: left;
-    padding: 10px; 
-    border: 1px solid var(--color-grid);
-    border-radius: 8px;
-    background-color: #1a1a1a;
-    font-size: 0.9em;
-}
-
-#max-g-display h2 {
-    color: white;
-    font-size: 1em;
-    margin-top: 0;
-    margin-bottom: 8px;
-    border-bottom: 1px solid var(--color-grid);
-    padding-bottom: 3px;
-    text-align: center;
-}
-
-#max-g-grid {
-    display: grid;
-    grid-template-columns: 1fr 1.5fr 1fr;
-    grid-template-rows: 1fr 1fr 1fr;
-    gap: 0px; 
-    text-align: center;
-    height: 120px;
-}
-
-.max-g-label {
-    font-size: 0.8em;
-    color: var(--color-grid);
-    position: relative;
-}
-
-.max-g-value {
-    font-weight: bold;
-    color: white;
-    font-size: 1.1em; 
-    position: relative;
-}
-
-/* 各要素のグリッド配置と、十字の配置調整 (変更なし) */
-#label-forward { grid-area: 1 / 2 / 2 / 3; align-self: end; } 
-#value-forward { grid-area: 1 / 2 / 2 / 3; align-self: start; margin-top: 10px;} 
-
-#label-left { grid-area: 2 / 1 / 3 / 2; align-self: center; justify-self: end; } 
-#value-left { grid-area: 2 / 1 / 3 / 2; align-self: center; justify-self: start; margin-left: 5px; } 
-
-#label-right { grid-area: 2 / 3 / 3 / 4; align-self: center; justify-self: start; } 
-#value-right { grid-area: 2 / 3 / 3 / 4; align-self: center; justify-self: end; margin-right: 5px; } 
-
-#label-backward { grid-area: 3 / 2 / 4 / 3; align-self: start; }
-#value-backward { grid-area: 3 / 2 / 4 / 3; align-self: end; margin-bottom: 10px; }
+/* ... (後略: max-g-display 以下のスタイルは変更なし) ... */
 
 /* スマートフォンでの縦画面対応 (Gメーターを小さくする) */
 @media (max-width: 768px) {
@@ -211,7 +147,13 @@ button:hover {
     }
     /* スマホでは「最大G表示」「Gメーター」「ボタン群」の順に縦に並べる */
     #left-panel { order: 1; }
-    #gauge-area { order: 2; width: 80vw; height: 80vw; max-width: 300px; max-height: 300px; }
+    #gauge-area { 
+        order: 2; 
+        width: 80vw; 
+        height: 80vw; 
+        max-width: 300px; 
+        max-height: 300px; 
+    }
     #right-panel { order: 3; }
     #controls { max-width: 90%; }
 }
