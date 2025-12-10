@@ -18,13 +18,14 @@ body {
     overflow: hidden; 
 }
 
+/* 🎯 修正点: メインレイアウトを3分割にし、中央にメーターを配置 🎯 */
 #main-layout {
     display: flex;
-    justify-content: center;
+    justify-content: space-between; /* 要素間にスペースを設ける */
     align-items: center;
     width: 100vw;
     height: 100vh;
-    gap: 20px; 
+    gap: 10px; 
     padding: 10px;
     box-sizing: border-box;
 }
@@ -33,13 +34,29 @@ h1 {
     color: white;
     font-size: 1.2em; 
     margin-bottom: 15px;
+    text-align: center;
 }
 
+/* 🎯 新しい左パネル (最大Gとログ) 🎯 */
+#left-panel {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 10px;
+    /* 中央のメーターが固定サイズなので、左右パネルは均等な幅を確保 */
+    flex-basis: 25%; 
+    min-width: 180px; 
+    max-width: 250px;
+}
+
+/* Gメーター (中央) */
 #gauge-area {
     position: relative;
     width: var(--meter-size);
     height: var(--meter-size);
-    flex-shrink: 1;
+    /* 縮小・拡大の対象としない */
+    flex-shrink: 0; 
     border: 2px solid var(--color-grid);
     border-radius: 50%;
     background-color: var(--color-meter-bg);
@@ -63,13 +80,16 @@ h1 {
     text-shadow: 0 0 5px var(--color-grid);
 }
 
+/* 🎯 右パネル (ボタン群) 🎯 */
 #right-panel {
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
     padding: 10px;
-    flex-grow: 1;
+    flex-basis: 25%; 
+    min-width: 180px;
+    max-width: 250px;
 }
 
 #controls {
@@ -108,6 +128,7 @@ button:hover {
     background-color: #3b9bff;
 }
 
+/* ログを左パネルに移設 */
 #log {
     margin-top: 10px;
     font-size: 0.7em;
@@ -117,6 +138,7 @@ button:hover {
     word-break: break-all;
 }
 
+/* 最大G表示エリア */
 #max-g-display {
     width: 100%;
     max-width: 180px; 
@@ -147,14 +169,6 @@ button:hover {
     height: 120px;
 }
 
-.max-g-cell {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    color: var(--color-text);
-}
-
 .max-g-label {
     font-size: 0.8em;
     color: var(--color-grid);
@@ -168,35 +182,36 @@ button:hover {
     position: relative;
 }
 
-/* 各要素のグリッド配置と、十字の配置調整 */
-
-/* 前 (上中央) */
+/* 各要素のグリッド配置と、十字の配置調整 (変更なし) */
 #label-forward { grid-area: 1 / 2 / 2 / 3; align-self: end; } 
 #value-forward { grid-area: 1 / 2 / 2 / 3; align-self: start; margin-top: 10px;} 
 
-/* 左 (中央左) */
 #label-left { grid-area: 2 / 1 / 3 / 2; align-self: center; justify-self: end; } 
 #value-left { grid-area: 2 / 1 / 3 / 2; align-self: center; justify-self: start; margin-left: 5px; } 
 
-/* 右 (中央右) */
 #label-right { grid-area: 2 / 3 / 3 / 4; align-self: center; justify-self: start; } 
 #value-right { grid-area: 2 / 3 / 3 / 4; align-self: center; justify-self: end; margin-right: 5px; } 
 
-/* 後 (下中央) */
 #label-backward { grid-area: 3 / 2 / 4 / 3; align-self: start; }
 #value-backward { grid-area: 3 / 2 / 4 / 3; align-self: end; margin-bottom: 10px; }
 
-/* 中央の空セル */
-#max-g-grid > div:nth-child(5) { 
-    grid-area: 2 / 2 / 3 / 3; 
-}
-
-
-@media (max-height: 400px) {
-    :root {
-        --meter-size: 200px; 
+/* スマートフォンでの縦画面対応 (Gメーターを小さくする) */
+@media (max-width: 768px) {
+    #main-layout {
+        flex-direction: column;
+        justify-content: flex-start;
+        height: auto;
+        min-height: 100vh;
     }
-    #g-display { font-size: 1.5em; }
-    #max-g-display { font-size: 0.8em; }
-    h1 { display: none; }
+    #left-panel, #right-panel {
+        width: 90%;
+        max-width: none;
+        min-width: 90%;
+        margin-bottom: 10px;
+    }
+    /* スマホでは「最大G表示」「Gメーター」「ボタン群」の順に縦に並べる */
+    #left-panel { order: 1; }
+    #gauge-area { order: 2; width: 80vw; height: 80vw; max-width: 300px; max-height: 300px; }
+    #right-panel { order: 3; }
+    #controls { max-width: 90%; }
 }
