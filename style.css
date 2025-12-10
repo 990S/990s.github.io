@@ -52,7 +52,6 @@ h1 {
     display: block;
 }
 
-/* G値を円の中心から上部に移動 (前々回修正済み) */
 #g-display {
     position: absolute;
     top: 15%; 
@@ -70,7 +69,7 @@ h1 {
     justify-content: center;
     align-items: center;
     padding: 10px;
-    max-width: 250px; 
+    /* 以前の max-width を削除し、ボタンと連動させる */
     flex-grow: 1;
 }
 
@@ -80,6 +79,8 @@ h1 {
     gap: 10px;
     margin-bottom: 20px;
     width: 100%;
+    /* 🎯 変更点: ボタン群の最大幅を制限して小さく見せる 🎯 */
+    max-width: 160px; /* 300px * 2/3 = 200px より少し小さめに設定 */
 }
 
 button {
@@ -109,8 +110,10 @@ button:hover {
     word-break: break-all;
 }
 
+/* 🎯 変更点: 最大G表示をメーターと同じ十字レイアウトにする 🎯 */
 #max-g-display {
     width: 100%;
+    max-width: 160px; /* ボタン群と同じ幅 */
     text-align: left;
     padding: 10px; 
     border: 1px solid var(--color-grid);
@@ -129,20 +132,62 @@ button:hover {
     text-align: center;
 }
 
-.max-g-row {
-    margin-bottom: 4px;
+/* 🎯 変更点: グリッドコンテナ 🎯 */
+#max-g-grid {
+    display: grid;
+    /* 3x3のグリッドを作成し、中央の行と列に値を配置 */
+    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-rows: 1fr 1fr 1fr;
+    gap: 5px;
+    text-align: center;
+}
+
+/* 凡例と値の基本スタイル */
+.max-g-cell {
     display: flex;
-    justify-content: space-between;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    color: var(--color-text);
 }
 
 .max-g-label {
-    color: var(--color-text);
+    font-size: 0.8em;
+    color: var(--color-grid);
 }
 
 .max-g-value {
     font-weight: bold;
     color: white;
+    font-size: 1.1em; /* 値を少し大きく */
 }
+
+/* 各要素のグリッド配置 */
+#label-forward { grid-area: 1 / 2 / 2 / 3; } /* 前 (上中央) */
+#value-forward { grid-area: 2 / 2 / 3 / 3; } /* 前の値 (中央中央) */
+
+#label-backward { grid-area: 3 / 2 / 4 / 3; } /* 後 (下中央) */
+#value-backward { grid-area: 3 / 2 / 4 / 3; } /* 後ろの値 (下中央) - ラベルと値が重なるように配置 */
+
+#label-left { grid-area: 2 / 1 / 3 / 2; } /* 左 (中央左) */
+#value-left { grid-area: 2 / 1 / 3 / 2; } /* 左の値 (中央左) - ラベルと値が重なるように配置 */
+
+#label-right { grid-area: 2 / 3 / 3 / 4; } /* 右 (中央右) */
+#value-right { grid-area: 2 / 3 / 3 / 4; } /* 右の値 (中央右) - ラベルと値が重なるように配置 */
+
+/* 凡例を上に配置し、値を下部に配置するための微調整 */
+#label-forward { margin-bottom: -15px; } /* 上にずらす */
+#value-forward { margin-top: 5px; } 
+
+#label-backward { margin-top: 15px; } /* 下にずらす */
+#value-backward { margin-bottom: -5px; } 
+
+#label-left { margin-right: 15px; }
+#value-left { margin-left: -10px; } 
+
+#label-right { margin-left: 15px; }
+#value-right { margin-right: -10px; } 
+
 
 @media (max-height: 400px) {
     :root {
