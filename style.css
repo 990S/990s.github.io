@@ -69,7 +69,6 @@ h1 {
     justify-content: center;
     align-items: center;
     padding: 10px;
-    /* 以前の max-width を削除し、ボタンと連動させる */
     flex-grow: 1;
 }
 
@@ -79,8 +78,14 @@ h1 {
     gap: 10px;
     margin-bottom: 20px;
     width: 100%;
-    /* 🎯 変更点: ボタン群の最大幅を制限して小さく見せる 🎯 */
-    max-width: 160px; /* 300px * 2/3 = 200px より少し小さめに設定 */
+    max-width: 180px; /* 3分の2 (約200px) 程度に微調整 */
+}
+
+/* 🎯 変更点: ボタンの行をFlexboxで横並びにする 🎯 */
+.button-row {
+    display: flex;
+    gap: 8px; /* ボタン間のスペース */
+    width: 100%;
 }
 
 button {
@@ -93,7 +98,9 @@ button {
     border-radius: 5px;
     cursor: pointer;
     transition: background-color 0.3s;
-    width: 100%;
+    /* 2行2列のため、横幅を自動調整 */
+    flex-grow: 1; 
+    width: 50%; 
     box-sizing: border-box;
 }
 
@@ -110,10 +117,10 @@ button:hover {
     word-break: break-all;
 }
 
-/* 🎯 変更点: 最大G表示をメーターと同じ十字レイアウトにする 🎯 */
+/* 最大G表示エリア */
 #max-g-display {
     width: 100%;
-    max-width: 160px; /* ボタン群と同じ幅 */
+    max-width: 180px; 
     text-align: left;
     padding: 10px; 
     border: 1px solid var(--color-grid);
@@ -132,14 +139,15 @@ button:hover {
     text-align: center;
 }
 
-/* 🎯 変更点: グリッドコンテナ 🎯 */
+/* 🎯 変更点: 最大Gのグリッドレイアウトを調整 🎯 */
 #max-g-grid {
     display: grid;
-    /* 3x3のグリッドを作成し、中央の行と列に値を配置 */
-    grid-template-columns: 1fr 1fr 1fr;
+    /* 3x3のグリッド */
+    grid-template-columns: 1fr 1.5fr 1fr; /* 中央列を少し広げ、値が重ならないようにする */
     grid-template-rows: 1fr 1fr 1fr;
-    gap: 5px;
+    gap: 0px; /* セル間のスペースを削除 */
     text-align: center;
+    height: 120px; /* 高さを固定して十字を明確にする */
 }
 
 /* 凡例と値の基本スタイル */
@@ -154,39 +162,40 @@ button:hover {
 .max-g-label {
     font-size: 0.8em;
     color: var(--color-grid);
+    /* ラベルを十字の外側に配置するためのスタイル */
+    position: relative;
 }
 
 .max-g-value {
     font-weight: bold;
     color: white;
-    font-size: 1.1em; /* 値を少し大きく */
+    font-size: 1.1em; 
+    /* 値を十字の中心に配置するためのスタイル */
+    position: relative;
 }
 
-/* 各要素のグリッド配置 */
-#label-forward { grid-area: 1 / 2 / 2 / 3; } /* 前 (上中央) */
-#value-forward { grid-area: 2 / 2 / 3 / 3; } /* 前の値 (中央中央) */
+/* 各要素のグリッド配置と、十字の配置調整 */
 
-#label-backward { grid-area: 3 / 2 / 4 / 3; } /* 後 (下中央) */
-#value-backward { grid-area: 3 / 2 / 4 / 3; } /* 後ろの値 (下中央) - ラベルと値が重なるように配置 */
+/* 前 (上中央) */
+#label-forward { grid-area: 1 / 2 / 2 / 3; align-self: end; } 
+#value-forward { grid-area: 1 / 2 / 2 / 3; align-self: start; margin-top: 10px;} 
 
-#label-left { grid-area: 2 / 1 / 3 / 2; } /* 左 (中央左) */
-#value-left { grid-area: 2 / 1 / 3 / 2; } /* 左の値 (中央左) - ラベルと値が重なるように配置 */
+/* 左 (中央左) */
+#label-left { grid-area: 2 / 1 / 3 / 2; align-self: center; justify-self: end; } 
+#value-left { grid-area: 2 / 1 / 3 / 2; align-self: center; justify-self: start; margin-left: 5px; } 
 
-#label-right { grid-area: 2 / 3 / 3 / 4; } /* 右 (中央右) */
-#value-right { grid-area: 2 / 3 / 3 / 4; } /* 右の値 (中央右) - ラベルと値が重なるように配置 */
+/* 右 (中央右) */
+#label-right { grid-area: 2 / 3 / 3 / 4; align-self: center; justify-self: start; } 
+#value-right { grid-area: 2 / 3 / 3 / 4; align-self: center; justify-self: end; margin-right: 5px; } 
 
-/* 凡例を上に配置し、値を下部に配置するための微調整 */
-#label-forward { margin-bottom: -15px; } /* 上にずらす */
-#value-forward { margin-top: 5px; } 
+/* 後 (下中央) */
+#label-backward { grid-area: 3 / 2 / 4 / 3; align-self: start; }
+#value-backward { grid-area: 3 / 2 / 4 / 3; align-self: end; margin-bottom: 10px; }
 
-#label-backward { margin-top: 15px; } /* 下にずらす */
-#value-backward { margin-bottom: -5px; } 
-
-#label-left { margin-right: 15px; }
-#value-left { margin-left: -10px; } 
-
-#label-right { margin-left: 15px; }
-#value-right { margin-right: -10px; } 
+/* 中央の空セル */
+#max-g-grid > div:nth-child(5) { 
+    grid-area: 2 / 2 / 3 / 3; 
+}
 
 
 @media (max-height: 400px) {
