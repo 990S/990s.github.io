@@ -21,7 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
     
-    // 🎯 変更点: 最大G表示のIDをHTMLの新しい配置に合わせる 🎯
+    // 最大G表示のIDをHTMLの新しい配置に合わせる
     const maxGLeftElement = document.getElementById('value-left');
     const maxGRightElement = document.getElementById('value-right');
     const maxGForwardElement = document.getElementById('value-forward');
@@ -43,10 +43,11 @@ document.addEventListener('DOMContentLoaded', () => {
     let peakG = 0;
     let warningCooldown = false; 
     
+    // 軸反転の状態を保持する変数 (デフォルトは反転なし: 1)
     let flipSide = 1; 
     let flipForward = 1; 
 
-    // --- メーター描画関数 (省略) ---
+    // --- メーター描画関数 ---
     function drawMeter() {
         const size = canvas.width;
         const center = size / 2;
@@ -57,7 +58,7 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.fillStyle = '#007aff';
         ctx.lineWidth = 1;
         
-        // (中略 - グリッド、トレースの描画処理)
+        // (中略 - グリッド、十字線)
         ctx.setLineDash([5, 5]); 
         const r03 = radius * (0.3 / METER_MAX_G);
         ctx.beginPath();
@@ -75,6 +76,7 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.lineTo(center, size);
         ctx.stroke();
         
+        // トレースの描画と寿命管理
         const now = performance.now();
         const maxTraceLife = TRACE_TIME_S * 1000;
         while (tracePoints.length > 0 && now - tracePoints[0].timestamp > maxTraceLife) {
@@ -124,15 +126,13 @@ document.addEventListener('DOMContentLoaded', () => {
     resizeCanvas();
     window.addEventListener('resize', resizeCanvas);
 
-    // 🎯 変更点: HTML IDの変更に合わせて要素更新を修正 🎯
     function updateMaxGDisplay() {
         if (maxGLeftElement) maxGLeftElement.textContent = maxG.left.toFixed(2);
         if (maxGRightElement) maxGRightElement.textContent = maxG.right.toFixed(2);
         if (maxGForwardElement) maxGForwardElement.textContent = maxG.forward.toFixed(2);
         if (maxGBackwardElement) maxGBackwardElement.textContent = maxG.backward.toFixed(2);
     }
-    // ... (後略: checkWarning, handleDeviceMotion, initializeZeroPointAndStart, startMotionTracking, イベントハンドラは変更なし)
-    
+
     function checkWarning(currentG) {
         if (peakG >= 0.4 && currentG < peakG - 0.3) {
             if (true) { 
@@ -143,6 +143,7 @@ document.addEventListener('DOMContentLoaded', () => {
         peakG = Math.max(peakG, currentG);
     }
     
+    // --- センサー処理 (軸マッピングと反転ロジック) ---
     function handleDeviceMotion(event) {
         if (!isInitialized) return;
 
@@ -154,7 +155,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const gY_device = (acc.y - gravityOffset.y) / 9.80665;
         const gZ_device = (acc.z - gravityOffset.z) / 9.80665; 
         
-        // 反転ロジック
+        // 反転ロジック: -1を乗算することでデフォルトの反転を維持しつつ、flip変数がユーザー反転を制御
         const g_side = gY_device * (-1 * flipSide); 
         const g_forward = gZ_device * (-1 * flipForward); 
 
@@ -182,6 +183,7 @@ document.addEventListener('DOMContentLoaded', () => {
         drawMeter();
     }
     
+    // --- センサー初期化ロジック ---
     const initializeZeroPointAndStart = (event) => {
         window.removeEventListener('devicemotion', initializeZeroPointAndStart);
 
@@ -215,6 +217,7 @@ document.addEventListener('DOMContentLoaded', () => {
         window.addEventListener('devicemotion', initializeZeroPointAndStart);
     }
     
+    // --- イベントハンドラ ---
     flipSideBtn.addEventListener('click', () => {
         flipSide *= -1; 
         const status = flipSide === 1 ? '通常' : '反転';
