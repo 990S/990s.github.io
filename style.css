@@ -5,8 +5,9 @@
     --color-trace: rgba(255, 0, 0, 1.0);
     --color-grid: #007aff; /* 青 */
     --color-text: #007aff; /* 青 */
-    --meter-size: 300px; /* メーターの直径 */
-    --scale-max-g: 0.7; /* メーターの最大表示G */
+    /* 🎯 変更点: 横画面で収めるため、メーターの最大サイズを小さくする 🎯 */
+    --meter-size: 200px; 
+    --scale-max-g: 0.7; 
 }
 
 body {
@@ -18,21 +19,22 @@ body {
     overflow: hidden; 
 }
 
+/* 画面全体（デフォルト：横並び） */
 #main-layout {
     display: flex;
     justify-content: space-between;
     align-items: center;
     width: 100vw;
     height: 100vh;
-    gap: 10px; 
-    padding: 10px;
+    gap: 5px; /* 隙間をさらに詰める */
+    padding: 5px; /* パディングも詰める */
     box-sizing: border-box;
 }
 
 h1 {
     color: white;
-    font-size: 1.2em; 
-    margin-bottom: 15px;
+    font-size: 1.0em; /* タイトルも小さく */
+    margin-bottom: 10px;
     text-align: center;
 }
 
@@ -42,21 +44,22 @@ h1 {
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    padding: 10px;
-    flex-basis: 25%; 
-    min-width: 180px; 
-    max-width: 250px;
+    padding: 5px;
+    /* 🎯 変更点: 幅を占有する割合を減らす (約20%に) 🎯 */
+    flex-basis: 20%; 
+    min-width: 100px; /* 最小幅を小さく */
+    max-width: 200px;
 }
 
 /* Gメーター (中央) */
 #gauge-area {
     position: relative;
-    /* 楕円バグ対策と中央配置のための設定 */
     max-width: var(--meter-size); 
     max-height: var(--meter-size);
-    width: 40vw; 
-    height: 40vw;
-    aspect-ratio: 1 / 1; /* 正方形であることを保証 */
+    /* 画面サイズに対してメーターが大きくなりすぎないように調整 */
+    width: 45vw; 
+    height: 45vw;
+    aspect-ratio: 1 / 1; 
     
     flex-shrink: 0; 
     border: 2px solid var(--color-grid);
@@ -65,21 +68,9 @@ h1 {
     box-shadow: 0 0 15px rgba(0, 122, 255, 0.5); 
 }
 
-#g-meter-canvas {
-    width: 100%;
-    height: 100%;
-    display: block;
-}
-
 #g-display {
-    position: absolute;
-    top: 15%; 
-    left: 50%;
-    transform: translate(-50%, -50%); 
-    font-size: 2.0em; 
-    font-weight: bold;
-    color: white;
-    text-shadow: 0 0 5px var(--color-grid);
+    top: 10%; /* メーターが小さくなるため、位置を少し上に */
+    font-size: 1.5em; 
 }
 
 /* 右パネル (ボタン群) */
@@ -88,130 +79,93 @@ h1 {
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    padding: 10px;
-    flex-basis: 25%; 
-    min-width: 180px;
-    max-width: 250px;
+    padding: 5px;
+    /* 🎯 変更点: 幅を占有する割合を減らす (約20%に) 🎯 */
+    flex-basis: 20%; 
+    min-width: 100px;
+    max-width: 200px;
 }
 
 /* ボタンの縦並び */
 #controls {
     display: flex;
     flex-direction: column; 
-    gap: 10px;
-    margin-bottom: 20px;
+    gap: 8px; /* 隙間を詰める */
+    margin-bottom: 10px;
     width: 100%;
     max-width: 180px;
 }
 
 button {
-    background-color: var(--color-grid);
-    color: var(--color-bg);
-    border: none;
-    padding: 8px 15px; 
-    font-size: 0.9em;
-    font-weight: bold;
-    border-radius: 5px;
-    cursor: pointer;
-    transition: background-color 0.3s;
-    
+    padding: 5px 10px; /* パディングを減らす */
+    font-size: 0.8em; /* フォントサイズを小さく */
     width: 100%; 
-    flex-grow: 0; 
-    flex-basis: auto;
-    box-sizing: border-box;
-}
-
-button:hover {
-    background-color: #3b9bff;
-}
-
-#log {
-    margin-top: 10px;
-    font-size: 0.7em;
-    color: gray;
-    width: 100%;
-    text-align: center;
-    word-break: break-all;
 }
 
 /* 最大G表示エリア */
 #max-g-display {
     width: 100%;
+    /* 最大G表示エリアもコンパクトに */
     max-width: 180px; 
-    text-align: left;
-    padding: 10px; 
-    border: 1px solid var(--color-grid);
-    border-radius: 8px;
-    background-color: #1a1a1a;
-    font-size: 0.9em;
+    padding: 5px; 
+    font-size: 0.8em;
 }
 
 #max-g-display h2 {
-    color: white;
-    font-size: 1em;
-    margin-top: 0;
-    margin-bottom: 8px;
-    border-bottom: 1px solid var(--color-grid);
-    padding-bottom: 3px;
-    text-align: center;
+    font-size: 0.9em;
+    margin-bottom: 5px;
 }
 
 #max-g-grid {
-    display: grid;
-    grid-template-columns: 1fr 1.5fr 1fr;
-    grid-template-rows: 1fr 1fr 1fr;
-    gap: 0px; 
-    text-align: center;
-    height: 120px;
+    height: 100px; /* 高さを縮小 */
 }
 
+/* クロス配置のフォントも小さく */
 .max-g-label {
-    font-size: 0.8em;
-    color: var(--color-grid);
-    position: relative;
+    font-size: 0.7em;
 }
 
 .max-g-value {
-    font-weight: bold;
-    color: white;
-    font-size: 1.1em; 
-    position: relative;
+    font-size: 1.0em; 
 }
 
-/* 各要素のグリッド配置と、十字の配置調整 */
-#label-forward { grid-area: 1 / 2 / 2 / 3; align-self: end; } 
-#value-forward { grid-area: 1 / 2 / 2 / 3; align-self: start; margin-top: 10px;} 
+/* ログ表示 */
+#log {
+    font-size: 0.6em;
+}
 
-#label-left { grid-area: 2 / 1 / 3 / 2; align-self: center; justify-self: end; } 
-#value-left { grid-area: 2 / 1 / 3 / 2; align-self: center; justify-self: start; margin-left: 5px; } 
 
-#label-right { grid-area: 2 / 3 / 3 / 4; align-self: center; justify-self: start; } 
-#value-right { grid-area: 2 / 3 / 3 / 4; align-self: center; justify-self: end; margin-right: 5px; } 
-
-#label-backward { grid-area: 3 / 2 / 4 / 3; align-self: start; }
-#value-backward { grid-area: 3 / 2 / 4 / 3; align-self: end; margin-bottom: 10px; }
-
-/* スマートフォンでの縦画面対応 */
-@media (max-width: 768px) {
+/* 🎯 メディアクエリの修正 🎯
+   iPhone SE3 の横画面 (750px幅) に対応するため、縦画面のブレークポイントを調整します。
+   この設定では、幅が500px以下（ほとんどの縦画面）の場合に縦並びになります。
+*/
+@media (max-width: 500px) {
     #main-layout {
         flex-direction: column;
         justify-content: flex-start;
         height: auto;
         min-height: 100vh;
+        gap: 10px;
+        padding: 10px;
     }
+    /* 縦画面では全幅を使用 */
     #left-panel, #right-panel {
         width: 90%;
         max-width: none;
         min-width: 90%;
-        margin-bottom: 10px;
     }
+    /* 縦画面での並び順 */
     #left-panel { order: 1; }
     #gauge-area { 
         order: 2; 
         width: 80vw; 
         height: 80vw; 
-        max-width: 300px; 
-        max-height: 300px; 
+        max-width: 250px; 
+        max-height: 250px; 
     }
     #right-panel { order: 3; }
+    
+    /* 縦画面に戻ったらフォントやパディングを少し大きくする */
+    h1 { font-size: 1.2em; }
+    button { font-size: 0.9em; padding: 8px 15px; }
 }
