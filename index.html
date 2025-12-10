@@ -8,42 +8,47 @@
 </head>
 <body>
     <div id="main-layout"> 
-
-        <div id="left-panel">
-            <h1>G-Force Web メーター</h1>
-            <div id="max-g-display">
-                <h2>最大G記録</h2>
-                
-                <div id="max-g-grid">
-                    <div id="label-forward" class="max-g-label">前</div>
-                    <div id="value-forward" class="max-g-value">0.00</div>
-                    <div id="label-left" class="max-g-label">左</div>
-                    <div id="value-left" class="max-g-value">0.00</div>
-                    <div id="label-right" class="max-g-label">右</div>
-                    <div id="value-right" class="max-g-value">0.00</div>
-                    <div id="label-backward" class="max-g-label">後</div>
-                    <div id="value-backward" class="max-g-value">0.00</div>
-                </div>
-            </div>
-            <div id="log">ログ: 待機中...</div>
-        </div>
-        
-
         <div id="gauge-area">
             <canvas id="g-meter-canvas"></canvas>
             <div id="g-display">0.00 G</div>
         </div>
 
         <div id="right-panel">
+            <h1>G-Force Web メーター</h1>
             
             <div id="controls">
-                <button id="request-permission">センサー許可/初期化</button>
-                <button id="reset-max-g">最大Gリセット</button>
-                <button id="flip-side-btn">左右の動きを反転</button>
-                <button id="flip-forward-btn">前後の動きを反転</button>
+                <div class="button-row">
+                    <button id="request-permission">センサー許可/初期化</button>
+                    <button id="reset-max-g">最大Gリセット</button>
+                </div>
+                <div class="button-row">
+                    <button id="flip-side-btn">左右の動きを反転</button>
+                    <button id="flip-forward-btn">前後の動きを反転</button>
+                </div>
             </div>
-        </div>
 
+            <div id="max-g-display">
+                <h2>最大G記録</h2>
+                
+                <div id="max-g-grid">
+                    
+                    <div id="label-forward" class="max-g-label">前</div>
+                    <div id="value-forward" class="max-g-value">0.00</div>
+
+                    <div id="label-left" class="max-g-label">左</div>
+                    <div id="value-left" class="max-g-value">0.00</div>
+                    
+                    <div id="label-right" class="max-g-label">右</div>
+                    <div id="value-right" class="max-g-value">0.00</div>
+
+                    <div id="label-backward" class="max-g-label">後</div>
+                    <div id="value-backward" class="max-g-value">0.00</div>
+                    
+                </div>
+            </div>
+
+            <div id="log">ログ: 待機中...</div>
+        </div>
     </div>
 
     <audio id="warning-sound" preload="auto"></audio>
