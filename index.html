@@ -8,9 +8,13 @@
 </head>
 <body>
     <div id="main-layout"> 
+        
+        <div id="center-group">
+            <div id="gauge-area">
+                <canvas id="g-meter-canvas"></canvas>
+                <div id="g-display">0.00 G</div>
+            </div>
 
-        <div id="left-panel">
-            <h1>G-Force Web メーター</h1>
             <div id="max-g-display">
                 <h2>最大G記録</h2>
                 
@@ -24,17 +28,12 @@
                     <div id="label-backward" class="max-g-label">後</div>
                     <div id="value-backward" class="max-g-value">0.00</div>
                 </div>
+                <div id="log">ログ: 待機中...</div>
             </div>
-            <div id="log">ログ: 待機中...</div>
-        </div>
-        
-
-        <div id="gauge-area">
-            <canvas id="g-meter-canvas"></canvas>
-            <div id="g-display">0.00 G</div>
         </div>
 
         <div id="right-panel">
+            <h1>G-Force Web メーター</h1>
             
             <div id="controls">
                 <button id="request-permission">センサー許可/初期化</button>
