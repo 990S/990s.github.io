@@ -1,4 +1,22 @@
-/* ... (中略) ... */
+:root {
+    --color-bg: #000000;
+    --color-meter-bg: #000000;
+    --color-ball: white;
+    --color-trace: rgba(255, 0, 0, 1.0);
+    --color-grid: #007aff; /* 青 */
+    --color-text: #007aff; /* 青 */
+    --meter-size: 200px; /* 横画面でのメーターサイズ */
+    --scale-max-g: 0.7; 
+}
+
+body {
+    background-color: var(--color-bg);
+    color: var(--color-text);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    min-height: 100vh;
+    margin: 0;
+    overflow: hidden; 
+}
 
 /* 🌐 横画面 (ランドスケープ) レイアウト (基本設定) */
 #main-layout {
@@ -18,29 +36,96 @@
 #center-group {
     display: flex;
     align-items: center;
+    /* メーターと最大G表示の間に約5mm (10px) の隙間 */
     gap: 10px; 
-    /* 🎯 修正点: 柔軟な幅の変更をさせないように flex-shrink を 0 に設定 🎯 */
-    flex-shrink: 0; 
+    flex-shrink: 1; 
 }
 
-/* ... (中略: #gauge-area のスタイル) ... */
+h1 {
+    color: white;
+    font-size: 1.0em; 
+    margin-bottom: 10px;
+    text-align: center;
+}
+
+/* Gメーター (中央左) - 楕円バグ対策済 */
+#gauge-area {
+    position: relative;
+    max-width: var(--meter-size); 
+    max-height: var(--meter-size);
+    /* 高さに合わせてサイズを決定 */
+    width: 90vh; 
+    height: 90vh;
+    aspect-ratio: 1 / 1; 
+    
+    flex-shrink: 0; 
+    border: 2px solid var(--color-grid);
+    border-radius: 50%;
+    background-color: var(--color-meter-bg);
+    box-shadow: 0 0 15px rgba(0, 122, 255, 0.5); 
+}
+
+#g-meter-canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+#g-display {
+    position: absolute;
+    top: 10%; 
+    left: 50%;
+    transform: translate(-50%, -50%); 
+    font-size: 1.5em; 
+    font-weight: bold;
+    color: white;
+    text-shadow: 0 0 5px var(--color-grid);
+}
 
 /* 右パネル (ボタン群) */
 #right-panel {
-    /* ... (中略) ... */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 5px;
+    min-width: 100px;
+    max-width: 200px;
     flex-basis: auto; 
-    /* 🎯 修正点: ボタン群もサイズ変更でブレないよう flex-shrink を 0 に設定 🎯 */
-    flex-shrink: 0; 
 }
 
-/* ... (中略) ... */
+/* ボタンの縦並び */
+#controls {
+    display: flex;
+    flex-direction: column; 
+    gap: 8px; 
+    margin-bottom: 10px;
+    width: 100%;
+    max-width: 180px;
+}
+
+button {
+    background-color: var(--color-grid);
+    color: var(--color-bg);
+    border: none;
+    padding: 5px 10px; 
+    font-size: 0.8em; 
+    font-weight: bold;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    width: 100%; 
+    box-sizing: border-box;
+}
+
+button:hover {
+    background-color: #3b9bff;
+}
 
 /* 最大G表示エリア (メーターの隣へ移動) */
 #max-g-display {
     width: 100%;
-    max-width: 250px; 
-    /* 🎯 修正点: min-width を追加し、最小幅を保証する 🎯 */
-    min-width: 200px; /* max-widthより少し小さい値を設定 */
+    max-width: 180px; 
     text-align: left;
     padding: 5px; 
     border: 1px solid var(--color-grid);
@@ -49,26 +134,121 @@
     font-size: 0.8em;
     margin-top: 10px; 
     margin-bottom: 10px;
-    /* 🎯 修正点: 自身もサイズ変更でブレないよう flex-shrink を 0 に設定 🎯 */
-    flex-shrink: 0;
 }
 
-/* ... (中略: #max-g-grid や .max-g-value のスタイル) ... */
+#max-g-display h2 {
+    font-size: 0.9em;
+    margin-top: 0;
+    margin-bottom: 5px;
+    border-bottom: 1px solid var(--color-grid);
+    padding-bottom: 3px;
+    text-align: center;
+}
 
-/* 📱 縦画面時はすべて縦に積み重ねる設定 */
+#max-g-grid {
+    display: grid;
+    grid-template-columns: 1fr 1.5fr 1fr;
+    grid-template-rows: 1fr 1fr 1fr;
+    gap: 0px; 
+    text-align: center;
+    height: 100px;
+}
+
+/* ラベルの非表示 (領域を維持するため visibility: hidden を使用) */
+.max-g-label {
+    visibility: hidden; 
+    position: relative;
+}
+
+.max-g-value {
+    font-weight: bold;
+    color: white;
+    font-size: 1.0em; 
+    position: relative;
+    /* すべての値を中央の2列目/2行目グリッドセルに重ねて配置 */
+    grid-area: 2 / 2 / 3 / 3; 
+    justify-self: center;
+    align-self: center;
+    /* テキストの影を薄く追加し、数字の視認性を向上 */
+    text-shadow: 0 0 3px rgba(0, 0, 0, 0.8);
+}
+
+/* --- 🎯 最大G数値の位置微調整セクション 🎯 --- */
+/* (これらの translateX/Y の値を変更することで、数値の十字位置を調整できます) */
+
+/* 前の値 (上) */
+#value-forward { 
+    transform: translateY(-40px); 
+} 
+/* 後ろの値 (下) */
+#value-backward { 
+    transform: translateY(40px); 
+}
+/* 左の値 (左) (JSで右Gの値が入っています) */
+#value-left { 
+    transform: translateX(-40px); 
+}
+/* 右の値 (右) (JSで左Gの値が入っています) */
+#value-right { 
+    transform: translateX(40px); 
+}
+
+/* ログは最大G表示パネル内に移動 */
+#log {
+    margin-top: 10px;
+    font-size: 0.6em;
+    color: gray;
+    width: 100%;
+    text-align: center;
+    word-break: break-all;
+}
+
+/* 縦画面時はすべて縦に積み重ねる設定 */
 @media (orientation: portrait) {
-    /* ... (中略: 縦画面時の #main-layout, #center-group など) ... */
+    #main-layout {
+        flex-direction: column;
+        justify-content: flex-start;
+        height: auto;
+        min-height: 100vh;
+        gap: 10px;
+        padding: 10px;
+    }
+    
+    /* 中央グループと右パネルを縦に並べる */
+    #center-group {
+        order: 1; 
+        flex-direction: column;
+        gap: 10px;
+        width: 90%;
+    }
+
+    #gauge-area { 
+        width: 80vw; 
+        height: 80vw; 
+        max-width: 300px; 
+        max-height: 300px; 
+    }
     
     #max-g-display {
         width: 100%;
         max-width: 300px; 
-        /* 🎯 修正点: 縦画面時も min-width を追加し、最小幅を保証する 🎯 */
-        min-width: 250px; 
-        font-size: 0.9em; 
-        margin-top: 0; 
-        margin-bottom: 0;
-        /* 自身もサイズ変更でブレないよう flex-shrink を 0 に設定 */
-        flex-shrink: 0;
     }
-    /* ... (後略) ... */
+    
+    #right-panel { 
+        order: 2; 
+        width: 90%;
+        max-width: none;
+        min-width: 90%;
+        padding: 10px;
+    }
+    
+    /* 縦画面時のスタイル調整 */
+    h1 { font-size: 1.2em; }
+    button { font-size: 0.9em; padding: 8px 15px; }
+    #g-display { top: 15%; font-size: 2.0em; }
+    #max-g-display { font-size: 0.9em; margin-top: 0; margin-bottom: 0; }
+    #max-g-grid { height: 120px; }
+    .max-g-label { visibility: hidden; } 
+    .max-g-value { font-size: 1.1em; }
+    #log { font-size: 0.7em; }
 }
