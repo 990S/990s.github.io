@@ -118,6 +118,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function resizeCanvas() {
+        // HTMLの構造変更により、gauge-areaがcenter-groupに包まれたため、サイズ取得元を変更しない
         const size = document.getElementById('gauge-area').offsetWidth; 
         canvas.width = size;
         canvas.height = size;
@@ -127,10 +128,12 @@ document.addEventListener('DOMContentLoaded', () => {
     window.addEventListener('resize', resizeCanvas);
 
     function updateMaxGDisplay() {
-        if (maxGLeftElement) maxGLeftElement.textContent = maxG.left.toFixed(2);
-        if (maxGRightElement) maxGRightElement.textContent = maxG.right.toFixed(2);
         if (maxGForwardElement) maxGForwardElement.textContent = maxG.forward.toFixed(2);
         if (maxGBackwardElement) maxGBackwardElement.textContent = maxG.backward.toFixed(2);
+        
+        // 🎯 修正点: 左右の値の表示位置を入れ替える 🎯
+        if (maxGRightElement) maxGRightElement.textContent = maxG.left.toFixed(2); // 左Gの値を右の要素へ
+        if (maxGLeftElement) maxGLeftElement.textContent = maxG.right.toFixed(2);   // 右Gの値を左の要素へ
     }
 
     function checkWarning(currentG) {
@@ -166,6 +169,7 @@ document.addEventListener('DOMContentLoaded', () => {
         totalG = Math.sqrt(filteredG.x * filteredG.x + filteredG.y * filteredG.y);
 
         // --- 最大G記録の更新 ---
+        // filteredG.x > 0 は左方向のG（ユーザー基準）
         if (filteredG.x > 0) { 
             maxG.left = Math.max(maxG.left, filteredG.x);
         } else { 
