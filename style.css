@@ -5,7 +5,7 @@
     --color-trace: rgba(255, 0, 0, 1.0);
     --color-grid: #007aff; /* 青 */
     --color-text: #007aff; /* 青 */
-    --meter-size: 200px; /* 横画面でのメーターサイズ */
+    --meter-size: 200px; 
     --scale-max-g: 0.7; 
 }
 
@@ -21,16 +21,26 @@ body {
 /* 🌐 横画面 (ランドスケープ) レイアウト (基本設定) */
 #main-layout {
     display: flex;
-    justify-content: space-between;
+    /* 🎯 変更点: ボタン群(右)と中央グループを両端に寄せる 🎯 */
+    justify-content: space-around; 
     align-items: center;
     width: 100vw;
     height: 100vh;
-    gap: 5px; /* 隙間を詰める */
+    gap: 5px; 
     padding: 5px; 
     box-sizing: border-box;
-    /* 横並びを保証 */
     flex-direction: row; 
 }
+
+/* 🎯 新規: Gメーターと最大G表示をまとめるコンテナ 🎯 */
+#center-group {
+    display: flex;
+    align-items: center;
+    /* 🎯 変更点: メーターと最大G表示の間に約10pxの隙間 (5mm相当) 🎯 */
+    gap: 10px; 
+    flex-shrink: 1; /* 小さい画面では縮小を許可 */
+}
+
 
 h1 {
     color: white;
@@ -39,24 +49,11 @@ h1 {
     text-align: center;
 }
 
-/* 左パネル (最大Gとログ) */
-#left-panel {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    padding: 5px;
-    flex-basis: 20%; 
-    min-width: 100px; 
-    max-width: 200px;
-}
-
-/* Gメーター (中央) - 楕円バグ対策済 */
+/* Gメーター (中央左) - 楕円バグ対策済 */
 #gauge-area {
     position: relative;
     max-width: var(--meter-size); 
     max-height: var(--meter-size);
-    /* 高さに合わせてサイズを決定 */
     width: 90vh; 
     height: 90vh;
     aspect-ratio: 1 / 1; 
@@ -92,9 +89,9 @@ h1 {
     justify-content: center;
     align-items: center;
     padding: 5px;
-    flex-basis: 20%; 
     min-width: 100px;
     max-width: 200px;
+    flex-basis: auto; 
 }
 
 /* ボタンの縦並び */
@@ -125,15 +122,20 @@ button:hover {
     background-color: #3b9bff;
 }
 
-/* 最大G表示エリア */
+/* 最大G表示エリア (メーターの隣へ移動) */
 #max-g-display {
     width: 100%;
     max-width: 180px; 
+    text-align: left;
     padding: 5px; 
     border: 1px solid var(--color-grid);
     border-radius: 8px;
     background-color: #1a1a1a;
     font-size: 0.8em;
+    
+    /* 🎯 変更点: Logをここに移設したため、マージンを追加 🎯 */
+    margin-top: 10px; 
+    margin-bottom: 10px;
 }
 
 #max-g-display h2 {
@@ -154,10 +156,9 @@ button:hover {
     height: 100px;
 }
 
+/* 🎯 変更点: ラベルの非表示 🎯 */
 .max-g-label {
-    font-size: 0.7em;
-    color: var(--color-grid);
-    position: relative;
+    display: none; 
 }
 
 .max-g-value {
@@ -167,8 +168,7 @@ button:hover {
     position: relative;
 }
 
-/* グリッド配置は省略 */
-
+/* ログは最大G表示パネル内に移動 */
 #log {
     margin-top: 10px;
     font-size: 0.6em;
@@ -178,7 +178,7 @@ button:hover {
     word-break: break-all;
 }
 
-/* 縦画面時はすべて縦に積み重ねる設定（以前要望された縦画面レイアウト） */
+/* 縦画面時はすべて縦に積み重ねる設定（変更なし） */
 @media (orientation: portrait) {
     #main-layout {
         flex-direction: column;
@@ -188,30 +188,42 @@ button:hover {
         gap: 10px;
         padding: 10px;
     }
-    #left-panel, #right-panel {
+    
+    /* 🎯 変更点: 中央グループと右パネルを縦に並べる 🎯 */
+    #center-group {
+        order: 1; /* 最大Gとメーターを最初に */
+        flex-direction: column;
+        gap: 10px;
         width: 90%;
-        max-width: none;
-        min-width: 90%;
-        margin-bottom: 0px;
-        padding: 10px;
     }
-    #left-panel { order: 1; }
+
     #gauge-area { 
-        order: 2; 
         width: 80vw; 
         height: 80vw; 
         max-width: 300px; 
         max-height: 300px; 
     }
-    #right-panel { order: 3; }
+    
+    #max-g-display {
+        width: 100%;
+        max-width: 300px; 
+    }
+    
+    #right-panel { 
+        order: 2; /* ボタン群を最後に */
+        width: 90%;
+        max-width: none;
+        min-width: 90%;
+        padding: 10px;
+    }
     
     /* 縦画面時のスタイル調整 */
     h1 { font-size: 1.2em; }
     button { font-size: 0.9em; padding: 8px 15px; }
     #g-display { top: 15%; font-size: 2.0em; }
-    #max-g-display { max-width: 250px; font-size: 0.9em; }
+    #max-g-display { font-size: 0.9em; margin-top: 0; margin-bottom: 0; }
     #max-g-grid { height: 120px; }
-    .max-g-label { font-size: 0.8em; }
+    .max-g-label { display: none; } /* 縦画面でもラベルは非表示 */
     .max-g-value { font-size: 1.1em; }
     #log { font-size: 0.7em; }
 }
