@@ -58,7 +58,7 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.fillStyle = '#007aff';
         ctx.lineWidth = 1;
         
-        // (中略 - グリッド、十字線)
+        // グリッド、十字線
         ctx.setLineDash([5, 5]); 
         const r03 = radius * (0.3 / METER_MAX_G);
         ctx.beginPath();
@@ -200,6 +200,9 @@ document.addEventListener('DOMContentLoaded', () => {
         
         filteredG.x = 0;
         filteredG.y = 0;
+
+        // センサーを開始する前に、canvasのサイズをリセットする (楕円バグ対策)
+        resizeCanvas(); 
 
         window.addEventListener('devicemotion', handleDeviceMotion);
         
