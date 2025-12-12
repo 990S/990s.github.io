@@ -21,7 +21,6 @@ body {
 /* 🌐 横画面 (ランドスケープ) レイアウト (基本設定) */
 #main-layout {
     display: flex;
-    /* ボタン群(右)と中央グループを両端に寄せる */
     justify-content: space-around; 
     align-items: center;
     width: 100vw;
@@ -36,9 +35,9 @@ body {
 #center-group {
     display: flex;
     align-items: center;
-    /* メーターと最大G表示の間に約5mm (10px) の隙間 */
     gap: 10px; 
-    flex-shrink: 1; 
+    /* サイズ変動防止: 柔軟な幅の変更をさせない */
+    flex-shrink: 0; 
 }
 
 h1 {
@@ -92,6 +91,8 @@ h1 {
     min-width: 100px;
     max-width: 200px;
     flex-basis: auto; 
+    /* サイズ変動防止: 柔軟な幅の変更をさせない */
+    flex-shrink: 0; 
 }
 
 /* ボタンの縦並び */
@@ -125,7 +126,13 @@ button:hover {
 /* 最大G表示エリア (メーターの隣へ移動) */
 #max-g-display {
     width: 100%;
-    max-width: 180px; 
+    /* 横画面時の最大幅 */
+    max-width: 250px; 
+    /* サイズ変動防止: 最小幅を保証 */
+    min-width: 200px; 
+    /* サイズ変動防止: 柔軟な幅の変更をさせない */
+    flex-shrink: 0;
+    
     text-align: left;
     padding: 5px; 
     border: 1px solid var(--color-grid);
@@ -169,12 +176,10 @@ button:hover {
     grid-area: 2 / 2 / 3 / 3; 
     justify-self: center;
     align-self: center;
-    /* テキストの影を薄く追加し、数字の視認性を向上 */
     text-shadow: 0 0 3px rgba(0, 0, 0, 0.8);
 }
 
 /* --- 🎯 最大G数値の位置微調整セクション 🎯 --- */
-/* (これらの translateX/Y の値を変更することで、数値の十字位置を調整できます) */
 
 /* 前の値 (上) */
 #value-forward { 
@@ -203,7 +208,7 @@ button:hover {
     word-break: break-all;
 }
 
-/* 縦画面時はすべて縦に積み重ねる設定 */
+/* 📱 縦画面時はすべて縦に積み重ねる設定 */
 @media (orientation: portrait) {
     #main-layout {
         flex-direction: column;
@@ -220,6 +225,7 @@ button:hover {
         flex-direction: column;
         gap: 10px;
         width: 90%;
+        flex-shrink: 0;
     }
 
     #gauge-area { 
@@ -232,6 +238,14 @@ button:hover {
     #max-g-display {
         width: 100%;
         max-width: 300px; 
+        /* 縦画面時の最小幅を保証 */
+        min-width: 250px; 
+        /* サイズ変動防止 */
+        flex-shrink: 0;
+        
+        font-size: 0.9em; 
+        margin-top: 0; 
+        margin-bottom: 0;
     }
     
     #right-panel { 
@@ -240,13 +254,13 @@ button:hover {
         max-width: none;
         min-width: 90%;
         padding: 10px;
+        flex-shrink: 0;
     }
     
     /* 縦画面時のスタイル調整 */
     h1 { font-size: 1.2em; }
     button { font-size: 0.9em; padding: 8px 15px; }
     #g-display { top: 15%; font-size: 2.0em; }
-    #max-g-display { font-size: 0.9em; margin-top: 0; margin-bottom: 0; }
     #max-g-grid { height: 120px; }
     .max-g-label { visibility: hidden; } 
     .max-g-value { font-size: 1.1em; }
