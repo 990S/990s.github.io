@@ -126,8 +126,8 @@ button:hover {
     /* 🎯 修正点: Gメーター (90vh) の 0.8倍 (約 72vh) にサイズを固定 🎯 */
     width: 72vh; 
     height: 72vh; 
-    max-width: 200px; 
-    max-height: 200px; /* (90vh * 0.8 が 200px を超えない範囲で調整) */
+    max-width: 150px; 
+    max-height: 150px; /* (90vh * 0.8 が 200px を超えない範囲で調整) */
     aspect-ratio: 1 / 1; /* 縦横比を1:1に固定 */
     min-width: 150px; 
     flex-shrink: 0;
