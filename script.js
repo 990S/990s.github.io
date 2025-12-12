@@ -3,11 +3,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const canvas = document.getElementById('g-meter-canvas');
     const ctx = canvas.getContext('2d');
     const gDisplay = document.getElementById('g-display');
-    const logElement = document.getElementById('log');
+    // ログ要素の配置がHTMLで変わったため、IDはそのまま使用
+    const logElement = document.getElementById('log'); 
     const requestPermissionButton = document.getElementById('request-permission');
     const resetMaxGButton = document.getElementById('reset-max-g');
     
-    // 新しいボタン要素を取得
     const flipSideBtn = document.getElementById('flip-side-btn');
     const flipForwardBtn = document.getElementById('flip-forward-btn');
     
@@ -21,7 +21,6 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
     
-    // 最大G表示のIDを取得 (左右は表示位置を入れ替えるため、IDと意味が逆になっている)
     const maxGLeftElement = document.getElementById('value-left');
     const maxGRightElement = document.getElementById('value-right');
     const maxGForwardElement = document.getElementById('value-forward');
@@ -43,7 +42,6 @@ document.addEventListener('DOMContentLoaded', () => {
     let peakG = 0;
     let warningCooldown = false; 
     
-    // 軸反転の状態を保持する変数 (デフォルトは反転なし: 1)
     let flipSide = 1; 
     let flipForward = 1; 
 
@@ -94,7 +92,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // --- ボール（現在のG）の描画 ---
         
-        // X軸は左右、Y軸は前後 (メーターのY座標は上が負、下が正なので、filteredG.yに-1をかける)
         const pixelX = filteredG.x * (radius / METER_MAX_G); 
         const pixelY = -filteredG.y * (radius / METER_MAX_G); 
 
@@ -131,9 +128,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (maxGForwardElement) maxGForwardElement.textContent = maxG.forward.toFixed(2);
         if (maxGBackwardElement) maxGBackwardElement.textContent = maxG.backward.toFixed(2);
         
-        // 左右の値の表示位置を入れ替える (HTML要素IDに合わせて)
-        if (maxGRightElement) maxGRightElement.textContent = maxG.left.toFixed(2);   // 左Gの値を右の要素へ
-        if (maxGLeftElement) maxGLeftElement.textContent = maxG.right.toFixed(2);    // 右Gの値を左の要素へ
+        if (maxGRightElement) maxGRightElement.textContent = maxG.left.toFixed(2);
+        if (maxGLeftElement) maxGLeftElement.textContent = maxG.right.toFixed(2);
     }
 
     function checkWarning(currentG) {
@@ -167,22 +163,22 @@ document.addEventListener('DOMContentLoaded', () => {
         // 縦画面と横画面でセンサー軸を入れ替えるロジック
         if (isPortrait) {
             // デバイスが縦向きの場合 (ポートレート)
-            // 左右 (メーターX軸): rawGX (X軸) を使用。正負を反転。
-            // 前後 (メーターY軸): rawGY (Y軸) を使用。正負を反転。
+            // 🎯 修正: 縦画面ではY軸が前後（縦に長い方向）に来るはずなので、Y軸をg_forwardに、X軸をg_sideにマッピングします。
             
-            // 前後: Y軸を使用し、正負を反転 (画面奥から手前に動かすとメーター上方向へ)
-            g_forward = rawGY * (-1); 
-            // 左右: X軸を使用し、正負を反転 (スマホを右に傾けるとメーター右方向へ)
+            // 前後 (メーターY軸): Y軸を使用し、加速度の方向を調整
+            // 後ろ向きの動き（減速）をメーターの下方向（Y+）に対応させるため、Y軸をそのまま使う
+            g_forward = rawGY; 
+            
+            // 左右 (メーターX軸): X軸を使用し、加速度の方向を調整
+            // 右向きの動き（右折）をメーターの右方向（X+）に対応させるため、X軸を反転
             g_side = rawGX * (-1);
 
         } else {
             // デバイスが横向きの場合 (ランドスケープ)
-            // 左右 (メーターX軸): rawGY (Y軸) を使用。正負を反転。
-            // 前後 (メーターY軸): rawGZ (Z軸) を使用。正負を反転。
+            // 左右 (メーターX軸): Y軸を使用し、正負を反転。
+            // 前後 (メーターY軸): Z軸を使用し、正負を反転。
             
-            // 前後: Z軸を使用し、正負を反転
             g_forward = rawGZ * (-1); 
-            // 左右: Y軸を使用し、正負を反転
             g_side = rawGY * (-1);
         }
         
@@ -197,7 +193,6 @@ document.addEventListener('DOMContentLoaded', () => {
         totalG = Math.sqrt(filteredG.x * filteredG.x + filteredG.y * filteredG.y);
 
         // --- 最大G記録の更新 ---
-        // filteredG.x > 0 は左方向のG
         if (filteredG.x > 0) { 
             maxG.left = Math.max(maxG.left, filteredG.x);
         } else { 
@@ -233,7 +228,6 @@ document.addEventListener('DOMContentLoaded', () => {
         filteredG.x = 0;
         filteredG.y = 0;
 
-        // センサーを開始する前に、canvasのサイズをリセットする (楕円バグ対策)
         resizeCanvas(); 
 
         window.addEventListener('devicemotion', handleDeviceMotion);
