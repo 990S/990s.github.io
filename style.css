@@ -31,12 +31,11 @@ body {
     flex-direction: row; 
 }
 
-/* Gメーターと最大G表示をまとめるコンテナ */
+/* Gメーターと最大G表示、ログをまとめるコンテナ */
 #center-group {
     display: flex;
     align-items: center;
     gap: 10px; 
-    /* サイズ変動防止: 柔軟な幅の変更をさせない */
     flex-shrink: 0; 
 }
 
@@ -47,7 +46,7 @@ h1 {
     text-align: center;
 }
 
-/* Gメーター (中央左) - 楕円バグ対策済 */
+/* Gメーター (中央左) */
 #gauge-area {
     position: relative;
     max-width: var(--meter-size); 
@@ -91,7 +90,6 @@ h1 {
     min-width: 100px;
     max-width: 200px;
     flex-basis: auto; 
-    /* サイズ変動防止: 柔軟な幅の変更をさせない */
     flex-shrink: 0; 
 }
 
@@ -125,22 +123,25 @@ button:hover {
 
 /* 最大G表示エリア (メーターの隣へ移動) */
 #max-g-display {
-    width: 100%;
-    /* 横画面時の最大幅 */
-    max-width: 1800px; 
-    /* サイズ変動防止: 最小幅を保証 */
-    min-width: 1800px; 
-    /* サイズ変動防止: 柔軟な幅の変更をさせない */
+    /* 🎯 修正点: Gメーターと同じサイズに固定 🎯 */
+    width: 90vh; /* メーターと同じ高さを基準に */
+    height: 90vh; /* メーターと同じ高さを基準に */
+    max-width: 250px; 
+    max-height: 250px; /* 縦横の変動を防ぐための最大高を設定 */
+    aspect-ratio: 1 / 1; /* 縦横比を1:1に固定 */
+    min-width: 150px; /* 最小幅を設定 */
     flex-shrink: 0;
     
-    text-align: left;
+    display: flex; /* グリッドとタイトルを縦に並べるため */
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    
     padding: 5px; 
     border: 1px solid var(--color-grid);
     border-radius: 8px;
     background-color: #1a1a1a;
     font-size: 0.8em;
-    margin-top: 10px; 
-    margin-bottom: 10px;
 }
 
 #max-g-display h2 {
@@ -150,6 +151,7 @@ button:hover {
     border-bottom: 1px solid var(--color-grid);
     padding-bottom: 3px;
     text-align: center;
+    width: 80%;
 }
 
 #max-g-grid {
@@ -158,7 +160,11 @@ button:hover {
     grid-template-rows: 1fr 1fr 1fr;
     gap: 0px; 
     text-align: center;
-    height: 100px;
+    /* 高さは親要素の高さに合わせて調整 */
+    flex-grow: 1;
+    width: 100%;
+    /* メーターサイズに比例して高さを決定 */
+    height: 80%; 
 }
 
 /* ラベルの非表示 (領域を維持するため visibility: hidden を使用) */
@@ -179,7 +185,8 @@ button:hover {
     text-shadow: 0 0 3px rgba(0, 0, 0, 0.8);
 }
 
-/* --- 🎯 最大G数値の位置微調整セクション 🎯 --- */
+/* --- 最大G数値の位置微調整セクション (横画面基準) --- */
+/* Gメーターと同じサイズになったため、値は調整が必要になる可能性があります */
 
 /* 前の値 (上) */
 #value-forward { 
@@ -198,7 +205,7 @@ button:hover {
     transform: translateX(40px); 
 }
 
-/* ログは最大G表示パネル内に移動 */
+/* ログは中央グループ直下に移動 */
 #log {
     margin-top: 10px;
     font-size: 0.6em;
@@ -219,7 +226,7 @@ button:hover {
         padding: 10px;
     }
     
-    /* 中央グループと右パネルを縦に並べる */
+    /* Gメーター、最大Gパネルを縦に並べる */
     #center-group {
         order: 1; 
         flex-direction: column;
@@ -236,16 +243,24 @@ button:hover {
     }
     
     #max-g-display {
+        /* 縦画面では横幅に合わせて柔軟に */
         width: 100%;
         max-width: 300px; 
-        /* 縦画面時の最小幅を保証 */
         min-width: 250px; 
-        /* サイズ変動防止 */
         flex-shrink: 0;
+        
+        /* 縦画面では正方形固定を解除し、コンテンツに合わせて高さを調整 */
+        height: auto; 
+        aspect-ratio: initial; 
         
         font-size: 0.9em; 
         margin-top: 0; 
         margin-bottom: 0;
+    }
+
+    #max-g-grid {
+        height: 120px;
+        flex-grow: initial;
     }
     
     #right-panel { 
@@ -261,8 +276,13 @@ button:hover {
     h1 { font-size: 1.2em; }
     button { font-size: 0.9em; padding: 8px 15px; }
     #g-display { top: 15%; font-size: 2.0em; }
-    #max-g-grid { height: 120px; }
-    .max-g-label { visibility: hidden; } 
     .max-g-value { font-size: 1.1em; }
     #log { font-size: 0.7em; }
+
+    /* --- 最大G数値の位置微調整セクション (縦画面基準) --- */
+    /* 縦画面でサイズが大きくなるため、トランスフォーム値も大きくする */
+    #value-forward { transform: translateY(-50px); } 
+    #value-backward { transform: translateY(50px); }
+    #value-left { transform: translateX(-50px); } 
+    #value-right { transform: translateX(50px); }
 }
