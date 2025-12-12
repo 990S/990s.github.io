@@ -173,4 +173,118 @@ button:hover {
 }
 
 .max-g-value {
-    font
+    font-weight: bold;
+    color: white;
+    /* 🎯 修正点: フォントサイズを約2倍に (1.0em -> 2.0em) 🎯 */
+    font-size: 2.0em; 
+    position: relative;
+    grid-area: 2 / 2 / 3 / 3; 
+    justify-self: center;
+    align-self: center;
+    text-shadow: 0 0 3px rgba(0, 0, 0, 0.8);
+}
+
+/* --- 最大G数値の位置微調整セクション (横画面基準) --- */
+/* フォントサイズが2倍になったため、トランスフォーム値を調整 */
+
+/* 前の値 (上) */
+#value-forward { 
+    transform: translateY(-50px); /* 40px -> 50px に増加 */
+} 
+/* 後ろの値 (下) */
+#value-backward { 
+    transform: translateY(50px); /* 40px -> 50px に増加 */
+}
+/* 左の値 (左) (JSで右Gの値が入っています) */
+#value-left { 
+    transform: translateX(-50px); /* 40px -> 50px に増加 */
+}
+/* 右の値 (右) (JSで左Gの値が入っています) */
+#value-right { 
+    transform: translateX(50px); /* 40px -> 50px に増加 */
+}
+
+/* ログは中央グループ直下に移動 */
+#log {
+    margin-top: 10px;
+    font-size: 0.6em;
+    color: gray;
+    width: 100%;
+    text-align: center;
+    word-break: break-all;
+}
+
+/* 📱 縦画面時はすべて縦に積み重ねる設定 */
+@media (orientation: portrait) {
+    #main-layout {
+        flex-direction: column;
+        justify-content: flex-start;
+        height: auto;
+        min-height: 100vh;
+        gap: 10px;
+        padding: 10px;
+    }
+    
+    /* Gメーター、最大Gパネルを縦に並べる */
+    #center-group {
+        order: 1; 
+        flex-direction: column;
+        gap: 10px;
+        width: 90%;
+        flex-shrink: 0;
+    }
+
+    #gauge-area { 
+        width: 80vw; 
+        height: 80vw; 
+        max-width: 300px; 
+        max-height: 300px; 
+    }
+    
+    #max-g-display {
+        /* 縦画面では横幅に合わせて柔軟に */
+        width: 100%;
+        max-width: 300px; 
+        min-width: 250px; 
+        flex-shrink: 0;
+        
+        /* 縦画面では正方形固定を解除し、コンテンツに合わせて高さを調整 */
+        height: auto; 
+        aspect-ratio: initial; 
+        
+        font-size: 0.9em; 
+        margin-top: 0; 
+        margin-bottom: 0;
+    }
+
+    #max-g-grid {
+        height: 120px;
+        flex-grow: initial;
+    }
+    
+    #right-panel { 
+        order: 2; 
+        width: 90%;
+        max-width: none;
+        min-width: 90%;
+        padding: 10px;
+        flex-shrink: 0;
+    }
+    
+    /* 縦画面時のスタイル調整 */
+    h1 { font-size: 1.2em; }
+    button { font-size: 0.9em; padding: 8px 15px; }
+    #g-display { top: 15%; font-size: 2.0em; }
+    
+    /* 🎯 修正点: 縦画面時のフォントサイズを2倍に (1.1em -> 2.2em) 🎯 */
+    .max-g-value { font-size: 2.2em; } 
+    
+    #log { font-size: 0.7em; }
+
+    /* --- 最大G数値の位置微調整セクション (縦画面基準) --- */
+    /* フォントサイズが2倍になったため、トランスフォーム値も調整 */
+    #value-forward { transform: translateY(-70px); /* 50px -> 70px に増加 */ } 
+    #value-backward { transform: translateY(70px); /* 50px -> 70px に増加 */ }
+    #value-left { transform: translateX(-70px); /* 50px -> 70px に増加 */ } 
+    #value-right { transform: translateX(70px); /* 50px -> 70px に増加 */ }
+}
