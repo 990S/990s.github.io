@@ -283,8 +283,8 @@ button:hover {
 
     /* --- 最大G数値の位置微調整セクション (縦画面基準) --- */
     /* フォントサイズが2倍になったため、トランスフォーム値も調整 */
-    #value-forward { transform: translateY(-70px); /* 50px -> 70px に増加 */ } 
-    #value-backward { transform: translateY(70px); /* 50px -> 70px に増加 */ }
-    #value-left { transform: translateX(-70px); /* 50px -> 70px に増加 */ } 
-    #value-right { transform: translateX(70px); /* 50px -> 70px に増加 */ }
+    #value-forward { transform: translateY(-30px); /* 50px -> 70px に増加 */ } 
+    #value-backward { transform: translateY(30px); /* 50px -> 70px に増加 */ }
+    #value-left { transform: translateX(-30px); /* 50px -> 70px に増加 */ } 
+    #value-right { transform: translateX(30px); /* 50px -> 70px に増加 */ }
 }
