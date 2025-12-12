@@ -21,7 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
     
-    // 最大G表示のIDをHTMLの新しい配置に合わせる
+    // 最大G表示のIDを取得 (左右は表示位置を入れ替えるため、IDと意味が逆になっている)
     const maxGLeftElement = document.getElementById('value-left');
     const maxGRightElement = document.getElementById('value-right');
     const maxGForwardElement = document.getElementById('value-forward');
@@ -94,6 +94,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // --- ボール（現在のG）の描画 ---
         
+        // X軸は左右、Y軸は前後 (メーターのY座標は上が負、下が正なので、filteredG.yに-1をかける)
         const pixelX = filteredG.x * (radius / METER_MAX_G); 
         const pixelY = -filteredG.y * (radius / METER_MAX_G); 
 
@@ -118,7 +119,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function resizeCanvas() {
-        // HTMLの構造変更により、gauge-areaがcenter-groupに包まれたため、サイズ取得元を変更しない
         const size = document.getElementById('gauge-area').offsetWidth; 
         canvas.width = size;
         canvas.height = size;
@@ -131,9 +131,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (maxGForwardElement) maxGForwardElement.textContent = maxG.forward.toFixed(2);
         if (maxGBackwardElement) maxGBackwardElement.textContent = maxG.backward.toFixed(2);
         
-        // 🎯 修正点: 左右の値の表示位置を入れ替える 🎯
-        if (maxGRightElement) maxGRightElement.textContent = maxG.left.toFixed(2); // 左Gの値を右の要素へ
-        if (maxGLeftElement) maxGLeftElement.textContent = maxG.right.toFixed(2);   // 右Gの値を左の要素へ
+        // 左右の値の表示位置を入れ替える (HTML要素IDに合わせて)
+        if (maxGRightElement) maxGRightElement.textContent = maxG.left.toFixed(2);   // 左Gの値を右の要素へ
+        if (maxGLeftElement) maxGLeftElement.textContent = maxG.right.toFixed(2);    // 右Gの値を左の要素へ
     }
 
     function checkWarning(currentG) {
@@ -154,13 +154,41 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!acc || acc.x === null || acc.y === null || acc.z === null) return; 
 
         // デバイス加速度 (重力成分除去)
-        const gX_device = (acc.x - gravityOffset.x) / 9.80665;
-        const gY_device = (acc.y - gravityOffset.y) / 9.80665;
-        const gZ_device = (acc.z - gravityOffset.z) / 9.80665; 
+        const rawGX = (acc.x - gravityOffset.x) / 9.80665;
+        const rawGY = (acc.y - gravityOffset.y) / 9.80665;
+        const rawGZ = (acc.z - gravityOffset.z) / 9.80665; 
         
-        // 反転ロジック: -1を乗算することでデフォルトの反転を維持しつつ、flip変数がユーザー反転を制御
-        const g_side = gY_device * (-1 * flipSide); 
-        const g_forward = gZ_device * (-1 * flipForward); 
+        let g_side;    // メーターの横軸 (左右)
+        let g_forward; // メーターの縦軸 (前後)
+
+        // 画面の向きを判定 (height > width なら縦向き)
+        const isPortrait = window.innerHeight > window.innerWidth;
+        
+        // 縦画面と横画面でセンサー軸を入れ替えるロジック
+        if (isPortrait) {
+            // デバイスが縦向きの場合 (ポートレート)
+            // 左右 (メーターX軸): rawGX (X軸) を使用。正負を反転。
+            // 前後 (メーターY軸): rawGY (Y軸) を使用。正負を反転。
+            
+            // 前後: Y軸を使用し、正負を反転 (画面奥から手前に動かすとメーター上方向へ)
+            g_forward = rawGY * (-1); 
+            // 左右: X軸を使用し、正負を反転 (スマホを右に傾けるとメーター右方向へ)
+            g_side = rawGX * (-1);
+
+        } else {
+            // デバイスが横向きの場合 (ランドスケープ)
+            // 左右 (メーターX軸): rawGY (Y軸) を使用。正負を反転。
+            // 前後 (メーターY軸): rawGZ (Z軸) を使用。正負を反転。
+            
+            // 前後: Z軸を使用し、正負を反転
+            g_forward = rawGZ * (-1); 
+            // 左右: Y軸を使用し、正負を反転
+            g_side = rawGY * (-1);
+        }
+        
+        // ユーザーによる反転設定を適用
+        g_side *= flipSide; 
+        g_forward *= flipForward;
 
         // --- フィルタリング (EMA) ---
         filteredG.x = (g_side * EMA_ALPHA) + (filteredG.x * (1 - EMA_ALPHA)); 
@@ -169,7 +197,7 @@ document.addEventListener('DOMContentLoaded', () => {
         totalG = Math.sqrt(filteredG.x * filteredG.x + filteredG.y * filteredG.y);
 
         // --- 最大G記録の更新 ---
-        // filteredG.x > 0 は左方向のG（ユーザー基準）
+        // filteredG.x > 0 は左方向のG
         if (filteredG.x > 0) { 
             maxG.left = Math.max(maxG.left, filteredG.x);
         } else { 
