@@ -3,21 +3,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const canvas = document.getElementById('g-meter-canvas');
     const ctx = canvas.getContext('2d');
     const gDisplay = document.getElementById('g-display');
-    // ログ要素の配置がHTMLで変わったため、IDはそのまま使用
     const logElement = document.getElementById('log'); 
     const requestPermissionButton = document.getElementById('request-permission');
     const resetMaxGButton = document.getElementById('reset-max-g');
-    
     const flipSideBtn = document.getElementById('flip-side-btn');
     const flipForwardBtn = document.getElementById('flip-forward-btn');
     
-    const warningSound = document.getElementById('warning-sound');
+    // const warningSound = document.getElementById('warning-sound'); // 未使用のため削除可能だが、機能維持のため残す
 
     if (!requestPermissionButton || !flipSideBtn || !flipForwardBtn) {
         if (logElement) {
              logElement.textContent = '致命的エラー: ボタン要素が見つかりません。HTML IDを確認してください。';
         }
-        console.error('Fatal Error: Button element not found.');
         return;
     }
     
@@ -28,7 +25,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const METER_MAX_G = 0.7; 
     const BALL_RADIUS = 8; 
-    const TRACE_TIME_S = 5.0; 
+    const TRACE_TIME_S = 3.0; 
     const EMA_ALPHA = 0.08; 
 
     // --- 状態変数 ---
@@ -40,7 +37,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let maxG = { left: 0, right: 0, forward: 0, backward: 0 };
     let peakG = 0;
-    let warningCooldown = false; 
+    // let warningCooldown = false; // 未使用のため削除可能だが、機能維持のため残す
     
     let flipSide = 1; 
     let flipForward = 1; 
@@ -91,7 +88,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         // --- ボール（現在のG）の描画 ---
-        
         const pixelX = filteredG.x * (radius / METER_MAX_G); 
         const pixelY = -filteredG.y * (radius / METER_MAX_G); 
 
@@ -163,21 +159,11 @@ document.addEventListener('DOMContentLoaded', () => {
         // 縦画面と横画面でセンサー軸を入れ替えるロジック
         if (isPortrait) {
             // デバイスが縦向きの場合 (ポートレート)
-            // 🎯 修正: 縦画面ではY軸が前後（縦に長い方向）に来るはずなので、Y軸をg_forwardに、X軸をg_sideにマッピングします。
-            
-            // 前後 (メーターY軸): Y軸を使用し、加速度の方向を調整
-            // 後ろ向きの動き（減速）をメーターの下方向（Y+）に対応させるため、Y軸をそのまま使う
             g_forward = rawGY; 
-            
-            // 左右 (メーターX軸): X軸を使用し、加速度の方向を調整
-            // 右向きの動き（右折）をメーターの右方向（X+）に対応させるため、X軸を反転
             g_side = rawGX * (-1);
 
         } else {
             // デバイスが横向きの場合 (ランドスケープ)
-            // 左右 (メーターX軸): Y軸を使用し、正負を反転。
-            // 前後 (メーターY軸): Z軸を使用し、正負を反転。
-            
             g_forward = rawGZ * (-1); 
             g_side = rawGY * (-1);
         }
