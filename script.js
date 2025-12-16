@@ -9,7 +9,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const flipSideBtn = document.getElementById('flip-side-btn');
     const flipForwardBtn = document.getElementById('flip-forward-btn');
     
-    // const warningSound = document.getElementById('warning-sound'); // 未使用のため削除可能だが、機能維持のため残す
+    // const warningSound = document.getElementById('warning-sound'); 
 
     if (!requestPermissionButton || !flipSideBtn || !flipForwardBtn) {
         if (logElement) {
@@ -37,7 +37,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let maxG = { left: 0, right: 0, forward: 0, backward: 0 };
     let peakG = 0;
-    // let warningCooldown = false; // 未使用のため削除可能だが、機能維持のため残す
     
     let flipSide = 1; 
     let flipForward = 1; 
@@ -159,7 +158,12 @@ document.addEventListener('DOMContentLoaded', () => {
         // 縦画面と横画面でセンサー軸を入れ替えるロジック
         if (isPortrait) {
             // デバイスが縦向きの場合 (ポートレート)
-            g_forward = rawGY; 
+            
+            // 前後 (メーターY軸): Y軸を使用し、反転。
+            // 🎯 修正: Y軸を反転 (-1) させることで、加速Gが正方向 (上) になるようにする。
+            g_forward = rawGY * (-1); 
+            
+            // 左右 (メーターX軸): X軸を使用し、正負を反転。
             g_side = rawGX * (-1);
 
         } else {
