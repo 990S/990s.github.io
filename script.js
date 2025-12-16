@@ -161,7 +161,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // 前後 (メーターY軸): Y軸を使用し、反転。
             // 🎯 修正: Y軸を反転 (-1) させることで、加速Gが正方向 (上) になるようにする。
-            g_forward = rawGY * (-1); 
+            g_forward = rawGZ * (-1); 
             
             // 左右 (メーターX軸): X軸を使用し、正負を反転。
             g_side = rawGX * (-1);
