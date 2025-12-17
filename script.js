@@ -159,7 +159,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // 縦画面と横画面でセンサー軸を入れ替えるロジック
         if (isPortrait) {
             // デバイスが縦向きの場合 (ポートレート)
-            g_forward = rawGY; 
+            g_forward = rawGZ; 
             g_side = rawGX * (-1);
 
         } else {
