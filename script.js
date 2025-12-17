@@ -8,12 +8,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const resetMaxGButton = document.getElementById('reset-max-g');
     const flipSideBtn = document.getElementById('flip-side-btn');
     const flipForwardBtn = document.getElementById('flip-forward-btn');
-    // 🎯 修正点: リロードボタンのDOM要素を取得 🎯
-    const reloadPageButton = document.getElementById('reload-page'); 
     
-    // const warningSound = document.getElementById('warning-sound'); 
+    // const warningSound = document.getElementById('warning-sound'); // 未使用のため削除可能だが、機能維持のため残す
 
-    if (!requestPermissionButton || !flipSideBtn || !flipForwardBtn || !reloadPageButton) {
+    if (!requestPermissionButton || !flipSideBtn || !flipForwardBtn) {
         if (logElement) {
              logElement.textContent = '致命的エラー: ボタン要素が見つかりません。HTML IDを確認してください。';
         }
@@ -39,6 +37,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let maxG = { left: 0, right: 0, forward: 0, backward: 0 };
     let peakG = 0;
+    // let warningCooldown = false; // 未使用のため削除可能だが、機能維持のため残す
     
     let flipSide = 1; 
     let flipForward = 1; 
@@ -160,11 +159,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // 縦画面と横画面でセンサー軸を入れ替えるロジック
         if (isPortrait) {
             // デバイスが縦向きの場合 (ポートレート)
-            
-            // 前後 (メーターY軸): Z軸を使用 (報告に基づき修正)
-            g_forward = rawGZ; 
-            
-            // 左右 (メーターX軸): X軸を使用し、正負を反転。
+            g_forward = rawGY; 
             g_side = rawGX * (-1);
 
         } else {
@@ -250,11 +245,6 @@ document.addEventListener('DOMContentLoaded', () => {
         logElement.textContent = `ログ: 前後の動きを${status}に設定しました。`;
     });
 
-    // 🎯 修正点: ページリロード処理を追加 🎯
-    reloadPageButton.addEventListener('click', () => {
-        logElement.textContent = 'ログ: ページを再読み込みしています...';
-        location.reload();
-    });
 
     requestPermissionButton.addEventListener('click', () => {
         if (isInitialized) {
