@@ -1,44 +1,277 @@
-/* ... (body, #main-layout, #center-group などの設定は省略) ... */
+:root {
+    --color-bg: #000000;
+    --color-meter-bg: #000000;
+    --color-ball: white;
+    --color-trace: rgba(255, 0, 0, 1.0);
+    --color-grid: #007aff; 
+    --color-text: #007aff; 
+    --meter-size: 200px; 
+    --scale-max-g: 0.7; 
+}
 
-/* 🎯 修正点: リロードボタンの専用コンテナ 🎯 */
-#top-button-area {
-    /* 横画面時は非表示または目立たない配置にする */
-    position: absolute;
-    top: -50px; /* 画面外に隠す */
-    left: 0;
+body {
+    background-color: var(--color-bg);
+    color: var(--color-text);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    min-height: 100vh;
+    margin: 0;
+    position: relative; 
+    overflow: hidden; 
+}
+
+/* 🌐 横画面 (ランドスケープ) レイアウト */
+#main-layout {
+    display: flex;
+    justify-content: space-around; 
+    align-items: center;
+    width: 100vw;
+    height: 100vh;
+    gap: 5px; 
+    padding: 5px; 
+    box-sizing: border-box;
+    flex-direction: row; 
+}
+
+/* Gメーターと最大G表示コンテナ */
+#center-group {
+    display: flex;
+    align-items: center;
+    gap: 10px; 
+    flex-shrink: 0; 
+}
+
+h1 {
+    color: white;
+    font-size: 1.0em; 
+    margin-bottom: 10px;
+    text-align: center;
+}
+
+/* Gメーター */
+#gauge-area {
+    position: relative;
+    max-width: var(--meter-size); 
+    max-height: var(--meter-size);
+    width: 90vh; 
+    height: 90vh;
+    aspect-ratio: 1 / 1; 
+    flex-shrink: 0; 
+    border: 2px solid var(--color-grid);
+    border-radius: 50%;
+    background-color: var(--color-meter-bg);
+    box-shadow: 0 0 15px rgba(0, 122, 255, 0.5); 
+}
+
+#g-meter-canvas {
     width: 100%;
-    z-index: 100;
+    height: 100%;
+    display: block;
 }
 
-#top-button-area button {
-    /* 他のボタンのスタイルを流用 */
+#g-display {
+    position: absolute;
+    top: 10%; 
+    left: 50%;
+    transform: translate(-50%, -50%); 
+    font-size: 1.5em; 
+    font-weight: bold;
+    color: white;
+    text-shadow: 0 0 5px var(--color-grid);
+}
+
+/* 右パネル (ボタン群) */
+#right-panel {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 5px;
+    min-width: 100px;
+    max-width: 200px;
+    flex-basis: auto; 
+    flex-shrink: 0; 
+}
+
+/* ボタンの縦並び */
+#controls {
+    display: flex;
+    flex-direction: column; 
+    gap: 8px; 
+    margin-bottom: 10px;
+    width: 100%;
+    max-width: 180px;
+}
+
+button {
+    background-color: var(--color-grid);
+    color: var(--color-bg);
+    border: none;
+    padding: 5px 10px; 
+    font-size: 0.8em; 
+    font-weight: bold;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    width: 100%; 
+    box-sizing: border-box;
+}
+
+button:hover {
+    background-color: #3b9bff;
+}
+
+/* 最大G表示エリア */
+#max-g-display {
+    width: 72vh; 
+    height: 72vh; 
+    max-width: 200px; 
+    max-height: 200px; 
+    aspect-ratio: 1 / 1; 
+    min-width: 150px; 
+    flex-shrink: 0;
+    
+    display: flex; 
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    
+    padding: 5px; 
+    border: 1px solid var(--color-grid);
+    border-radius: 8px;
+    background-color: #1a1a1a;
     font-size: 0.8em;
-    padding: 5px 10px;
 }
 
-/* ... (横画面時の #right-panel, button, #max-g-display などの設定は省略) ... */
+#max-g-display h2 {
+    font-size: 0.9em;
+    margin-top: 0;
+    margin-bottom: 5px;
+    border-bottom: 1px solid var(--color-grid);
+    padding-bottom: 3px;
+    text-align: center;
+    width: 80%;
+}
+
+#max-g-grid {
+    display: grid;
+    grid-template-columns: 1fr 1.5fr 1fr;
+    grid-template-rows: 1fr 1fr 1fr;
+    gap: 0px; 
+    text-align: center;
+    flex-grow: 1;
+    width: 100%;
+    height: 80%; 
+}
+
+/* ラベルの非表示 */
+.max-g-label {
+    visibility: hidden; 
+    position: relative;
+}
+
+.max-g-value {
+    font-weight: bold;
+    color: white;
+    font-size: 2.0em; 
+    position: relative;
+    grid-area: 2 / 2 / 3 / 3; 
+    justify-self: center;
+    align-self: center;
+    text-shadow: 0 0 3px rgba(0, 0, 0, 0.8);
+}
+
+/* --- 最大G数値の位置微調整セクション (横画面基準) --- */
+#value-forward { 
+    transform: translateY(-50px); 
+} 
+#value-backward { 
+    transform: translateY(50px); 
+}
+#value-left { 
+    transform: translateX(-50px); 
+}
+#value-right { 
+    transform: translateX(50px); 
+}
+
+/* ログ (画面左下に絶対配置) */
+#log {
+    position: absolute; 
+    bottom: 10px; 
+    left: 10px;   
+    font-size: 0.6em;
+    color: gray;
+    width: auto; 
+    text-align: left; 
+    word-break: break-all;
+    background-color: rgba(0, 0, 0, 0.7); 
+    padding: 5px;
+    border-radius: 5px;
+    z-index: 10;
+}
 
 /* 📱 縦画面時の設定 */
 @media (orientation: portrait) {
-    /* ... (縦画面時の #main-layout, #center-group, #right-panel などの設定は省略) ... */
-
-    /* 🎯 修正点: 縦画面時のみリロードボタンを画面上部に固定 🎯 */
-    #top-button-area {
-        position: fixed; /* 画面に固定 */
-        top: 0;
-        left: 0;
-        width: 100%;
-        text-align: center;
-        background-color: rgba(0, 0, 0, 0.8); /* メーターと重なっても見えるように半透明背景 */
-        padding: 5px 0;
-        box-sizing: border-box;
+    #main-layout {
+        flex-direction: column;
+        justify-content: flex-start;
+        height: auto;
+        min-height: 100vh;
+        gap: 10px;
+        padding: 10px;
     }
     
-    #top-button-area button {
-        max-width: 90%;
-        font-size: 0.9em;
-        padding: 8px 15px; 
+    #center-group {
+        order: 1; 
+        flex-direction: column;
+        gap: 10px;
+        width: 90%;
+        flex-shrink: 0;
     }
 
-    /* ... (その他の縦画面時の設定は省略) ... */
+    #gauge-area { 
+        width: 80vw; 
+        height: 80vw; 
+        max-width: 300px; 
+        max-height: 300px; 
+    }
+    
+    #max-g-display {
+        width: 100%;
+        max-width: 300px; 
+        min-width: 250px; 
+        flex-shrink: 0;
+        height: auto; 
+        aspect-ratio: initial; 
+        font-size: 0.9em; 
+        margin-top: 0; 
+        margin-bottom: 0;
+    }
+
+    #max-g-grid {
+        height: 120px;
+        flex-grow: initial;
+    }
+    
+    #right-panel { 
+        order: 2; 
+        width: 90%;
+        max-width: none;
+        min-width: 90%;
+        padding: 10px;
+        flex-shrink: 0;
+    }
+    
+    /* 縦画面時のスタイル調整 */
+    h1 { font-size: 1.2em; }
+    button { font-size: 0.9em; padding: 8px 15px; }
+    #g-display { top: 15%; font-size: 2.0em; }
+    .max-g-value { font-size: 2.2em; } 
+    #log { font-size: 0.7em; }
+
+    /* --- 最大G数値の位置微調整セクション (縦画面基準) --- */
+    #value-forward { transform: translateY(-70px); } 
+    #value-backward { transform: translateY(70px); }
+    #value-left { transform: translateX(-70px); } 
+    #value-right { transform: translateX(70px); }
 }
