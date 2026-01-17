@@ -70,7 +70,7 @@ h1 {
 
 #g-display {
     position: absolute;
-    top: 10%; 
+    top: 90%; 
     left: 50%;
     transform: translate(-50%, -50%); 
     font-size: 1.5em; 
