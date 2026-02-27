@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Web G-Bowl</title>
+    <style>
+        body {
+            background-color: #000;
+            color: #fff;
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            text-align: center;
+            overflow: hidden; /* スクロール防止 */
+        }
+        
+        #overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0, 0, 0, 0.9);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        #canvas-container {
+            margin: 20px auto;
+            width: 300px;
+            height: 300px;
+        }
+
+        canvas {
+            background-color: #111;
+            border-radius: 50%;
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.1);
+        }
+
+        .btn {
+            background-color: #333;
+            color: #fff;
+            border: 1px solid #666;
+            padding: 12px 24px;
+            font-size: 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 10px;
+        }
+
+        .btn:active {
+            background-color: #555;
+        }
+
+        #start-btn {
+            background-color: #d32f2f;
+            border-color: #f44336;
+            font-weight: bold;
+            font-size: 18px;
+            padding: 15px 30px;
+        }
+
+        .info-panel {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            font-size: 20px;
+            margin-top: 10px;
+        }
+
+        .peak-panel {
+            color: #ff9800;
+            font-size: 18px;
+            margin-top: 5px;
+        }
+
+        .label {
+            font-size: 12px;
+            color: #aaa;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="overlay">
+        <h2>Web G-Bowl</h2>
+        <p style="margin-bottom:30px; font-size:14px; color:#aaa;">※iOSの場合はモーションセンサーの許可が必要です</p>
+        <button id="start-btn" class="btn" onclick="requestPermission()">計測スタート</button>
+    </div>
+
+    <div id="canvas-container">
+        <canvas id="gbowl-canvas" width="300" height="300"></canvas>
+    </div>
+
+    <div class="info-panel">
+        <div><span class="label">X (左右)</span><span id="val-x">0.00</span> G</div>
+        <div><span class="label">Y (前後)</span><span id="val-y">0.00</span> G</div>
+    </div>
+
+    <div class="peak-panel">
+        <span class="label">PEAK G</span>
+        <span id="val-peak">0.00</span> G
+    </div>
+
+    <div>
+        <button class="btn" onclick="calibrate()">0点補正 (キャリブレーション)</button>
+    </div>
+
+    <script>
+        // --- 設定値 ---
+        const MAX_G = 1.0;          // キャンバスの端を1.0Gとする
+        const ALPHA = 0.15;         // ローパスフィルタ（感度: 普通）。0に近いほど滑らか、1に近いほど敏感
+
+        // --- 変数 ---
+        let currentX = 0, currentY = 0; // フィルタ後のG値
+        let offsetX = 0, offsetY = 0;   // キャリブレーション補正値
+        let peakG = 0;                  // ピークホールド値
+        let isRunning = false;
+
+        const canvas = document.getElementById('gbowl-canvas');
+        const ctx = canvas.getContext('2d');
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+        const radius1G = 140; // 1.0Gの半径 (ピクセル)
+
+        // --- センサー起動・許可 (iOS 13+ 対応) ---
+        function requestPermission() {
+            if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+                DeviceMotionEvent.requestPermission()
+                    .then(permissionState => {
+                        if (permissionState === 'granted') {
+                            startSensing();
+                        } else {
+                            alert("センサーの使用が許可されませんでした。");
+                        }
+                    })
+                    .catch(console.error);
+            } else {
+                // Android等、許可ダイアログが不要な端末
+                startSensing();
+            }
+        }
+
+        function startSensing() {
+            document.getElementById('overlay').style.display = 'none';
+            if (!isRunning) {
+                window.addEventListener('devicemotion', handleMotion, true);
+                requestAnimationFrame(updateFrame);
+                isRunning = true;
+            }
+        }
+
+        // --- センサーデータの処理 ---
+        function handleMotion(event) {
+            let acc = event.accelerationIncludingGravity;
+            if (!acc || acc.x === null) return;
+
+            // m/s^2 を G (重力加速度) に変換
+            let rawX = acc.x / 9.80665;
+            let rawY = acc.y / 9.80665;
+
+            // 画面の向き（自動回転）に対応して軸を補正
+            let orient = window.orientation || 0;
+            let adjX = rawX, adjY = rawY;
+            if (orient === 90) { adjX = -rawY; adjY = rawX; }
+            else if (orient === -90) { adjX = rawY; adjY = -rawX; }
+            else if (orient === 180) { adjX = -rawX; adjY = -rawY; }
+
+            // ローパスフィルタ適用 (微振動のノイズを除去)
+            currentX = currentX + ALPHA * (adjX - currentX);
+            currentY = currentY + ALPHA * (adjY - currentY);
+        }
+
+        // --- キャリブレーション (0点補正) ---
+        function calibrate() {
+            offsetX = currentX;
+            offsetY = currentY;
+            peakG = 0; // ピークもリセット
+        }
+
+        // --- 描画と数値更新 (毎フレーム実行) ---
+        function updateFrame() {
+            // 表示用のG値（現在値 - 補正値）
+            // ※端末やOSによって符号が逆になる場合、ここの - を + にする等で調整可能です
+            let dispX = currentX - offsetX;
+            let dispY = currentY - offsetY;
+
+            // ピークホールドの計算 (ベクトルの大きさ)
+            let currentG = Math.sqrt(dispX * dispX + dispY * dispY);
+            if (currentG > peakG) {
+                peakG = currentG;
+            }
+
+            // HTMLへの数値反映
+            document.getElementById('val-x').innerText = dispX.toFixed(2);
+            document.getElementById('val-y').innerText = dispY.toFixed(2);
+            document.getElementById('val-peak').innerText = peakG.toFixed(2);
+
+            // --- キャンバス描画 ---
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // ガイド円を描画 (0.3G, 0.6G, 1.0G)
+            drawGuideCircle(0.3, '#333');
+            drawGuideCircle(0.6, '#444');
+            drawGuideCircle(1.0, '#555');
+
+            // クロスラインを描画
+            ctx.strokeStyle = '#333';
+            ctx.beginPath();
+            ctx.moveTo(centerX, 0); ctx.lineTo(centerX, canvas.height);
+            ctx.moveTo(0, centerY); ctx.lineTo(canvas.width, centerY);
+            ctx.stroke();
+
+            // ボールの位置を計算 (1.0G = radius1Gピクセル)
+            // ※ブレーキ(Y+)でボールを上に、右カーブ(X-)で左に動かすため符号を反転しています
+            let ballPixelX = centerX - (dispX * radius1G);
+            let ballPixelY = centerY - (dispY * radius1G);
+
+            // ボールが外枠(1.0G)を超えないように制限（視覚的リミッター）
+            let dist = Math.sqrt(Math.pow(ballPixelX - centerX, 2) + Math.pow(ballPixelY - centerY, 2));
+            if (dist > radius1G) {
+                let ratio = radius1G / dist;
+                ballPixelX = centerX + (ballPixelX - centerX) * ratio;
+                ballPixelY = centerY + (ballPixelY - centerY) * ratio;
+            }
+
+            // 赤いボールを描画
+            ctx.beginPath();
+            ctx.arc(ballPixelX, ballPixelY, 8, 0, Math.PI * 2);
+            ctx.fillStyle = '#ff3333';
+            ctx.fill();
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = '#ff0000';
+            
+            // ピークの赤い点（残像）を描画したい場合はここに追加可能
+
+            ctx.shadowBlur = 0; // シャドウリセット
+
+            // 次のフレームをリクエスト
+            requestAnimationFrame(updateFrame);
+        }
+
+        // ガイド円描画ヘルパー
+        function drawGuideCircle(gValue, color) {
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius1G * (gValue / MAX_G), 0, Math.PI * 2);
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+            
+            // 目盛りの文字
+            ctx.fillStyle = '#666';
+            ctx.font = "10px sans-serif";
+            ctx.fillText(gValue.toFixed(1) + "G", centerX + 5, centerY - (radius1G * gValue) + 12);
+        }
+    </script>
+</body>
+</html>
