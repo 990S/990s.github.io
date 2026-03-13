@@ -80,6 +80,42 @@
             color: #aaa;
             display: block;
         }
+
+        /* 📱 縦置き（ポートレート）時専用のレイアウト調整 */
+        @media screen and (orientation: portrait) {
+            body {
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                height: 100vh;
+                height: 100dvh; /* iOS SafariなどのUIを除いた正確な表示領域 */
+                box-sizing: border-box;
+                padding: 10px 0;
+            }
+            #canvas-container {
+                margin: 0 auto 15px auto;
+                width: 80vw; /* 画面幅の80%に合わせて縮小 */
+                height: 80vw;
+                max-width: 300px;
+                max-height: 300px;
+            }
+            canvas {
+                width: 100%;
+                height: 100%;
+            }
+            .info-panel {
+                margin-top: 0;
+                margin-bottom: 10px;
+            }
+            .peak-panel {
+                margin-top: 0;
+                margin-bottom: 15px;
+            }
+            .btn {
+                margin: 0;
+            }
+        }
     </style>
 </head>
 <body>
@@ -110,22 +146,22 @@
 
     <script>
         // --- 設定値 ---
-        const MAX_G = 1.0;          // キャンバスの端を1.0Gとする
-        const ALPHA = 0.15;         // ローパスフィルタ（感度: 普通）。0に近いほど滑らか、1に近いほど敏感
+        const MAX_G = 1.0;          
+        const ALPHA = 0.15;         
 
         // --- 変数 ---
-        let currentX = 0, currentY = 0; // フィルタ後のG値
-        let offsetX = 0, offsetY = 0;   // キャリブレーション補正値
-        let peakG = 0;                  // ピークホールド値
+        let currentX = 0, currentY = 0; 
+        let offsetX = 0, offsetY = 0;   
+        let peakG = 0;                  
         let isRunning = false;
 
         const canvas = document.getElementById('gbowl-canvas');
         const ctx = canvas.getContext('2d');
         const centerX = canvas.width / 2;
         const centerY = canvas.height / 2;
-        const radius1G = 140; // 1.0Gの半径 (ピクセル)
+        const radius1G = 140; 
 
-        // --- センサー起動・許可 (iOS 13+ 対応) ---
+        // --- センサー起動・許可 ---
         function requestPermission() {
             if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
                 DeviceMotionEvent.requestPermission()
@@ -138,7 +174,6 @@
                     })
                     .catch(console.error);
             } else {
-                // Android等、許可ダイアログが不要な端末
                 startSensing();
             }
         }
@@ -157,68 +192,55 @@
             let acc = event.accelerationIncludingGravity;
             if (!acc || acc.x === null) return;
 
-            // m/s^2 を G (重力加速度) に変換
             let rawX = acc.x / 9.80665;
             let rawY = acc.y / 9.80665;
 
-            // 画面の向き（自動回転）に対応して軸を補正
             let orient = window.orientation || 0;
             let adjX = rawX, adjY = rawY;
             if (orient === 90) { adjX = -rawY; adjY = rawX; }
             else if (orient === -90) { adjX = rawY; adjY = -rawX; }
             else if (orient === 180) { adjX = -rawX; adjY = -rawY; }
 
-            // ローパスフィルタ適用 (微振動のノイズを除去)
             currentX = currentX + ALPHA * (adjX - currentX);
             currentY = currentY + ALPHA * (adjY - currentY);
         }
 
-        // --- キャリブレーション (0点補正) ---
+        // --- キャリブレーション ---
         function calibrate() {
             offsetX = currentX;
             offsetY = currentY;
-            peakG = 0; // ピークもリセット
+            peakG = 0; 
         }
 
-        // --- 描画と数値更新 (毎フレーム実行) ---
+        // --- 描画と数値更新 ---
         function updateFrame() {
-            // 表示用のG値（現在値 - 補正値）
-            // ※端末やOSによって符号が逆になる場合、ここの - を + にする等で調整可能です
             let dispX = currentX - offsetX;
             let dispY = currentY - offsetY;
 
-            // ピークホールドの計算 (ベクトルの大きさ)
             let currentG = Math.sqrt(dispX * dispX + dispY * dispY);
             if (currentG > peakG) {
                 peakG = currentG;
             }
 
-            // HTMLへの数値反映
             document.getElementById('val-x').innerText = dispX.toFixed(2);
             document.getElementById('val-y').innerText = dispY.toFixed(2);
             document.getElementById('val-peak').innerText = peakG.toFixed(2);
 
-            // --- キャンバス描画 ---
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // ガイド円を描画 (0.3G, 0.6G, 1.0G)
             drawGuideCircle(0.3, '#333');
             drawGuideCircle(0.6, '#444');
             drawGuideCircle(1.0, '#555');
 
-            // クロスラインを描画
             ctx.strokeStyle = '#333';
             ctx.beginPath();
             ctx.moveTo(centerX, 0); ctx.lineTo(centerX, canvas.height);
             ctx.moveTo(0, centerY); ctx.lineTo(canvas.width, centerY);
             ctx.stroke();
 
-            // ボールの位置を計算 (1.0G = radius1Gピクセル)
-            // ※ブレーキ(Y+)でボールを上に、右カーブ(X-)で左に動かすため符号を反転しています
             let ballPixelX = centerX - (dispX * radius1G);
             let ballPixelY = centerY - (dispY * radius1G);
 
-            // ボールが外枠(1.0G)を超えないように制限（視覚的リミッター）
             let dist = Math.sqrt(Math.pow(ballPixelX - centerX, 2) + Math.pow(ballPixelY - centerY, 2));
             if (dist > radius1G) {
                 let ratio = radius1G / dist;
@@ -226,23 +248,17 @@
                 ballPixelY = centerY + (ballPixelY - centerY) * ratio;
             }
 
-            // 赤いボールを描画
             ctx.beginPath();
             ctx.arc(ballPixelX, ballPixelY, 8, 0, Math.PI * 2);
             ctx.fillStyle = '#ff3333';
             ctx.fill();
             ctx.shadowBlur = 10;
             ctx.shadowColor = '#ff0000';
-            
-            // ピークの赤い点（残像）を描画したい場合はここに追加可能
+            ctx.shadowBlur = 0; 
 
-            ctx.shadowBlur = 0; // シャドウリセット
-
-            // 次のフレームをリクエスト
             requestAnimationFrame(updateFrame);
         }
 
-        // ガイド円描画ヘルパー
         function drawGuideCircle(gValue, color) {
             ctx.beginPath();
             ctx.arc(centerX, centerY, radius1G * (gValue / MAX_G), 0, Math.PI * 2);
@@ -250,7 +266,6 @@
             ctx.lineWidth = 1.5;
             ctx.stroke();
             
-            // 目盛りの文字
             ctx.fillStyle = '#666';
             ctx.font = "10px sans-serif";
             ctx.fillText(gValue.toFixed(1) + "G", centerX + 5, centerY - (radius1G * gValue) + 12);
