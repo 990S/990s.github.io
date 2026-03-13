@@ -13,6 +13,9 @@
             padding: 0;
             text-align: center;
             overflow: hidden; /* スクロール防止 */
+            height: 100vh;
+            height: 100dvh; /* UIを除いた正確な画面高さ */
+            width: 100vw;
         }
         
         #overlay {
@@ -26,16 +29,75 @@
             z-index: 1000;
         }
 
-        #canvas-container {
-            margin: 20px auto;
-            width: 300px;
-            height: 300px;
+        /* 画面全体を囲うコンテナ */
+        #main-container {
+            display: flex;
+            width: 100%;
+            height: 100%;
+            box-sizing: border-box;
+            padding: 10px;
+        }
+
+        /* 左右（上下）のパネル共通設定 */
+        #left-pane, #right-pane {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #right-pane {
+            flex-direction: column;
+            gap: 15px; /* 右側の文字やボタンの間隔 */
+        }
+
+        /* 📱 縦画面（Portrait）のレイアウト: 上下に並べる */
+        @media screen and (orientation: portrait) {
+            #main-container {
+                flex-direction: column;
+            }
+            #left-pane {
+                flex: 0 0 auto;
+                margin-top: 10px;
+                margin-bottom: 10px;
+            }
+            #right-pane {
+                flex: 1 1 auto;
+                justify-content: flex-start;
+            }
+            #canvas-container {
+                width: 80vw; /* 画面幅に合わせて縮小 */
+                height: 80vw;
+                max-width: 300px;
+                max-height: 300px;
+            }
+        }
+
+        /* 📱 横画面（Landscape）のレイアウト: 左右に並べる */
+        @media screen and (orientation: landscape) {
+            #main-container {
+                flex-direction: row;
+            }
+            #left-pane {
+                flex: 1 1 50%;
+            }
+            #right-pane {
+                flex: 1 1 50%;
+            }
+            #canvas-container {
+                width: 80vh; /* 画面の高さに合わせて縮小 */
+                height: 80vh;
+                max-width: 300px;
+                max-height: 300px;
+            }
         }
 
         canvas {
+            width: 100%;
+            height: 100%;
             background-color: #111;
             border-radius: 50%;
             box-shadow: 0 0 15px rgba(255, 255, 255, 0.1);
+            display: block;
         }
 
         .btn {
@@ -46,7 +108,6 @@
             font-size: 16px;
             border-radius: 8px;
             cursor: pointer;
-            margin: 10px;
         }
 
         .btn:active {
@@ -66,55 +127,18 @@
             justify-content: center;
             gap: 20px;
             font-size: 20px;
-            margin-top: 10px;
         }
 
         .peak-panel {
             color: #ff9800;
             font-size: 18px;
-            margin-top: 5px;
         }
 
         .label {
             font-size: 12px;
             color: #aaa;
             display: block;
-        }
-
-        /* 📱 縦置き（ポートレート）時専用のレイアウト調整 */
-        @media screen and (orientation: portrait) {
-            body {
-                display: flex;
-                flex-direction: column;
-                justify-content: center;
-                align-items: center;
-                height: 100vh;
-                height: 100dvh; /* iOS SafariなどのUIを除いた正確な表示領域 */
-                box-sizing: border-box;
-                padding: 10px 0;
-            }
-            #canvas-container {
-                margin: 0 auto 15px auto;
-                width: 80vw; /* 画面幅の80%に合わせて縮小 */
-                height: 80vw;
-                max-width: 300px;
-                max-height: 300px;
-            }
-            canvas {
-                width: 100%;
-                height: 100%;
-            }
-            .info-panel {
-                margin-top: 0;
-                margin-bottom: 10px;
-            }
-            .peak-panel {
-                margin-top: 0;
-                margin-bottom: 15px;
-            }
-            .btn {
-                margin: 0;
-            }
+            margin-bottom: 4px;
         }
     </style>
 </head>
@@ -126,22 +150,30 @@
         <button id="start-btn" class="btn" onclick="requestPermission()">計測スタート</button>
     </div>
 
-    <div id="canvas-container">
-        <canvas id="gbowl-canvas" width="300" height="300"></canvas>
-    </div>
+    <div id="main-container">
+        
+        <div id="left-pane">
+            <div id="canvas-container">
+                <canvas id="gbowl-canvas" width="300" height="300"></canvas>
+            </div>
+        </div>
 
-    <div class="info-panel">
-        <div><span class="label">X (左右)</span><span id="val-x">0.00</span> G</div>
-        <div><span class="label">Y (前後)</span><span id="val-y">0.00</span> G</div>
-    </div>
+        <div id="right-pane">
+            <div class="info-panel">
+                <div><span class="label">X (左右)</span><span id="val-x">0.00</span> G</div>
+                <div><span class="label">Y (前後)</span><span id="val-y">0.00</span> G</div>
+            </div>
 
-    <div class="peak-panel">
-        <span class="label">PEAK G</span>
-        <span id="val-peak">0.00</span> G
-    </div>
+            <div class="peak-panel">
+                <span class="label">PEAK G</span>
+                <span id="val-peak">0.00</span> G
+            </div>
 
-    <div>
-        <button class="btn" onclick="calibrate()">0点補正 (キャリブレーション)</button>
+            <div>
+                <button class="btn" onclick="calibrate()">0点補正 (キャリブレーション)</button>
+            </div>
+        </div>
+
     </div>
 
     <script>
@@ -195,12 +227,14 @@
             let rawX = acc.x / 9.80665;
             let rawY = acc.y / 9.80665;
 
+            // 画面の向きに対応して軸を補正
             let orient = window.orientation || 0;
             let adjX = rawX, adjY = rawY;
             if (orient === 90) { adjX = -rawY; adjY = rawX; }
             else if (orient === -90) { adjX = rawY; adjY = -rawX; }
             else if (orient === 180) { adjX = -rawX; adjY = -rawY; }
 
+            // ローパスフィルタ適用
             currentX = currentX + ALPHA * (adjX - currentX);
             currentY = currentY + ALPHA * (adjY - currentY);
         }
@@ -244,32 +278,4 @@
             let dist = Math.sqrt(Math.pow(ballPixelX - centerX, 2) + Math.pow(ballPixelY - centerY, 2));
             if (dist > radius1G) {
                 let ratio = radius1G / dist;
-                ballPixelX = centerX + (ballPixelX - centerX) * ratio;
-                ballPixelY = centerY + (ballPixelY - centerY) * ratio;
-            }
-
-            ctx.beginPath();
-            ctx.arc(ballPixelX, ballPixelY, 8, 0, Math.PI * 2);
-            ctx.fillStyle = '#ff3333';
-            ctx.fill();
-            ctx.shadowBlur = 10;
-            ctx.shadowColor = '#ff0000';
-            ctx.shadowBlur = 0; 
-
-            requestAnimationFrame(updateFrame);
-        }
-
-        function drawGuideCircle(gValue, color) {
-            ctx.beginPath();
-            ctx.arc(centerX, centerY, radius1G * (gValue / MAX_G), 0, Math.PI * 2);
-            ctx.strokeStyle = color;
-            ctx.lineWidth = 1.5;
-            ctx.stroke();
-            
-            ctx.fillStyle = '#666';
-            ctx.font = "10px sans-serif";
-            ctx.fillText(gValue.toFixed(1) + "G", centerX + 5, centerY - (radius1G * gValue) + 12);
-        }
-    </script>
-</body>
-</html>
+                ballPixelX =
