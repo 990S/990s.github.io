@@ -12,9 +12,9 @@
             margin: 0;
             padding: 0;
             text-align: center;
-            overflow: hidden; /* スクロール防止 */
+            overflow: hidden;
             height: 100vh;
-            height: 100dvh; /* UIを除いた正確な画面高さ */
+            height: 100dvh;
             width: 100vw;
         }
         
@@ -29,7 +29,6 @@
             z-index: 1000;
         }
 
-        /* 画面全体を囲うコンテナ */
         #main-container {
             display: flex;
             width: 100%;
@@ -38,7 +37,6 @@
             padding: 10px;
         }
 
-        /* 左右（上下）のパネル共通設定 */
         #left-pane, #right-pane {
             display: flex;
             align-items: center;
@@ -47,48 +45,21 @@
 
         #right-pane {
             flex-direction: column;
-            gap: 15px; /* 右側の文字やボタンの間隔 */
+            gap: 15px;
         }
 
-        /* 📱 縦画面（Portrait）のレイアウト: 上下に並べる */
         @media screen and (orientation: portrait) {
-            #main-container {
-                flex-direction: column;
-            }
-            #left-pane {
-                flex: 0 0 auto;
-                margin-top: 10px;
-                margin-bottom: 10px;
-            }
-            #right-pane {
-                flex: 1 1 auto;
-                justify-content: flex-start;
-            }
-            #canvas-container {
-                width: 80vw; /* 画面幅に合わせて縮小 */
-                height: 80vw;
-                max-width: 300px;
-                max-height: 300px;
-            }
+            #main-container { flex-direction: column; }
+            #left-pane { flex: 0 0 auto; margin-top: 10px; margin-bottom: 10px; }
+            #right-pane { flex: 1 1 auto; justify-content: flex-start; }
+            #canvas-container { width: 80vw; height: 80vw; max-width: 300px; max-height: 300px; }
         }
 
-        /* 📱 横画面（Landscape）のレイアウト: 左右に並べる */
         @media screen and (orientation: landscape) {
-            #main-container {
-                flex-direction: row;
-            }
-            #left-pane {
-                flex: 1 1 50%;
-            }
-            #right-pane {
-                flex: 1 1 50%;
-            }
-            #canvas-container {
-                width: 80vh; /* 画面の高さに合わせて縮小 */
-                height: 80vh;
-                max-width: 300px;
-                max-height: 300px;
-            }
+            #main-container { flex-direction: row; }
+            #left-pane { flex: 1 1 50%; }
+            #right-pane { flex: 1 1 50%; }
+            #canvas-container { width: 80vh; height: 80vh; max-width: 300px; max-height: 300px; }
         }
 
         canvas {
@@ -110,8 +81,28 @@
             cursor: pointer;
         }
 
-        .btn:active {
-            background-color: #555;
+        .btn:active { background-color: #555; }
+
+        /* 反転ボタン用の小さめスタイル */
+        .btn-small {
+            background-color: #222;
+            color: #ccc;
+            border: 1px solid #555;
+            padding: 8px 16px;
+            font-size: 14px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        .btn-small.active {
+            background-color: #1976d2; /* ONの時は青色に */
+            color: #fff;
+            border-color: #2196f3;
+        }
+
+        .controls-row {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
         }
 
         #start-btn {
@@ -172,6 +163,11 @@
             <div>
                 <button class="btn" onclick="calibrate()">0点補正 (キャリブレーション)</button>
             </div>
+
+            <div class="controls-row">
+                <button id="btn-inv-x" class="btn-small" onclick="toggleInvertX()">左右反転: OFF</button>
+                <button id="btn-inv-y" class="btn-small" onclick="toggleInvertY()">上下反転: OFF</button>
+            </div>
         </div>
 
     </div>
@@ -186,6 +182,10 @@
         let offsetX = 0, offsetY = 0;   
         let peakG = 0;                  
         let isRunning = false;
+        
+        // 反転フラグ (1 = 通常, -1 = 反転)
+        let invertX = 1;
+        let invertY = 1;
 
         const canvas = document.getElementById('gbowl-canvas');
         const ctx = canvas.getContext('2d');
@@ -204,7 +204,9 @@
                             alert("センサーの使用が許可されませんでした。");
                         }
                     })
-                    .catch(console.error);
+                    .catch(e => {
+                        alert("【エラー】HTTPS環境でないか、対応していません。\n詳細: " + e);
+                    });
             } else {
                 startSensing();
             }
@@ -246,64 +248,10 @@
             peakG = 0; 
         }
 
-        // --- 描画と数値更新 ---
-        function updateFrame() {
-            let dispX = currentX - offsetX;
-            let dispY = currentY - offsetY;
-
-            let currentG = Math.sqrt(dispX * dispX + dispY * dispY);
-            if (currentG > peakG) {
-                peakG = currentG;
-            }
-
-            document.getElementById('val-x').innerText = dispX.toFixed(2);
-            document.getElementById('val-y').innerText = dispY.toFixed(2);
-            document.getElementById('val-peak').innerText = peakG.toFixed(2);
-
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            drawGuideCircle(0.3, '#333');
-            drawGuideCircle(0.6, '#444');
-            drawGuideCircle(1.0, '#555');
-
-            ctx.strokeStyle = '#333';
-            ctx.beginPath();
-            ctx.moveTo(centerX, 0); ctx.lineTo(centerX, canvas.height);
-            ctx.moveTo(0, centerY); ctx.lineTo(canvas.width, centerY);
-            ctx.stroke();
-
-            let ballPixelX = centerX - (dispX * radius1G);
-            let ballPixelY = centerY - (dispY * radius1G);
-
-            let dist = Math.sqrt(Math.pow(ballPixelX - centerX, 2) + Math.pow(ballPixelY - centerY, 2));
-            if (dist > radius1G) {
-                let ratio = radius1G / dist;
-                ballPixelX = centerX + (ballPixelX - centerX) * ratio;
-                ballPixelY = centerY + (ballPixelY - centerY) * ratio;
-            }
-
-            ctx.beginPath();
-            ctx.arc(ballPixelX, ballPixelY, 8, 0, Math.PI * 2);
-            ctx.fillStyle = '#ff3333';
-            ctx.fill();
-            ctx.shadowBlur = 10;
-            ctx.shadowColor = '#ff0000';
-            ctx.shadowBlur = 0; 
-
-            requestAnimationFrame(updateFrame);
-        }
-
-        function drawGuideCircle(gValue, color) {
-            ctx.beginPath();
-            ctx.arc(centerX, centerY, radius1G * (gValue / MAX_G), 0, Math.PI * 2);
-            ctx.strokeStyle = color;
-            ctx.lineWidth = 1.5;
-            ctx.stroke();
-            
-            ctx.fillStyle = '#666';
-            ctx.font = "10px sans-serif";
-            ctx.fillText(gValue.toFixed(1) + "G", centerX + 5, centerY - (radius1G * gValue) + 12);
-        }
-    </script>
-</body>
-</html>
+        // --- 反転トグル処理 ---
+        function toggleInvertX() {
+            invertX *= -1; // 1 と -1 を切り替え
+            const btn = document.getElementById('btn-inv-x');
+            if (invertX === -1) {
+                btn.innerText = "左右反転: ON";
+                btn.classList
